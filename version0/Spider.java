@@ -1,8 +1,8 @@
-package newplayer;
+package version0;
 
 import bugwars.*;
 
-public class Beetle {
+public class Spider {
 
     private MemoryManager manager;
     private UnitController uc;

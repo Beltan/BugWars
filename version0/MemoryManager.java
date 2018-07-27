@@ -1,4 +1,4 @@
-package newplayer;
+package version0;
 
 import bugwars.*;
 
