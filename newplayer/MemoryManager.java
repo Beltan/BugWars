@@ -65,7 +65,12 @@ public class MemoryManager {
     }
 
     public void roundZeroInitialization() {
-
+        Location myQueens[] = uc.getMyQueensLocation();
+        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        int xLow = myQueens[0].x;
+        int yLow = myQueens[0].y;
+        int xHigh = myQueens[0].x;
+        int yHigh = myQueens[0].y;
     }
 
     public void mapSizeUpdate() {
@@ -74,23 +79,19 @@ public class MemoryManager {
 
     private int unitRange() {
         int range = 0;
-        switch (myType) {
-            case ANT:
-                range = (int) Math.sqrt(GameConstants.ANT_SIGHT_RANGE_SQUARED);
-                break;
-            case BEE:
-                range = (int) Math.sqrt(GameConstants.BEE_SIGHT_RANGE_SQUARED);
-                break;
-            case BEETLE:
-                range = (int) Math.sqrt(GameConstants.BEETLE_SIGHT_RANGE_SQUARED);
-                break;
-            case QUEEN:
-                range = (int) Math.sqrt(GameConstants.QUEEN_SIGHT_RANGE_SQUARED);
-                break;
-            case SPIDER:
-                range = (int) Math.sqrt(GameConstants.SPIDER_SIGHT_RANGE_SQUARED);
-                break;
+
+        if (myType == UnitType.QUEEN) {
+            range = (int) Math.sqrt(GameConstants.QUEEN_SIGHT_RANGE_SQUARED);
+        } else if (myType == UnitType.ANT) {
+            range = (int) Math.sqrt(GameConstants.ANT_SIGHT_RANGE_SQUARED);
+        } else if (myType == UnitType.BEE) {
+            range = (int) Math.sqrt(GameConstants.BEE_SIGHT_RANGE_SQUARED);
+        } else if (myType == UnitType.BEETLE) {
+            range = (int) Math.sqrt(GameConstants.BEETLE_SIGHT_RANGE_SQUARED);
+        } else if (myType == UnitType.SPIDER) {
+            range = (int) Math.sqrt(GameConstants.SPIDER_SIGHT_RANGE_SQUARED);
         }
+
         return range;
     }
 

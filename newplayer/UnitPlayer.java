@@ -18,22 +18,16 @@ public class UnitPlayer {
 
             manager.update();
 
-            switch(manager.myType) {
-                case QUEEN:
-                    queen.play();
-                    break;
-                case ANT:
-                    ant.play();
-                    break;
-                case BEETLE:
-                    beetle.play();
-                    break;
-                case BEE:
-                    bee.play();
-                    break;
-                case SPIDER:
-                    spider.play();
-                    break;
+            if (manager.myType == UnitType.QUEEN) {
+                queen.play();
+            } else if (manager.myType == UnitType.ANT) {
+                ant.play();
+            } else if (manager.myType == UnitType.BEE) {
+                bee.play();
+            } else if (manager.myType == UnitType.BEETLE) {
+                beetle.play();
+            } else if (manager.myType == UnitType.SPIDER) {
+                spider.play();
             }
 
             uc.yield(); //End of turn
