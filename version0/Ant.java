@@ -8,7 +8,16 @@ public class Ant {
     private UnitController uc;
 
     public void play() {
+        tryHarvest();
+        tryMove();
+        tryHarvest();
+    }
+
+    private void tryMove() {
 
     }
 
+    private void tryHarvest() {
+
+    }
 }

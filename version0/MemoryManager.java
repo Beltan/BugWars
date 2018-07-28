@@ -13,6 +13,7 @@ public class MemoryManager {
     public Direction[] dirs;
     public Location myLocation;
     public UnitType myType;
+    public UnitInfo[] units;
 
     // Shared memory
     // 0 to 99 are general information and states
@@ -30,6 +31,20 @@ public class MemoryManager {
     public int XLOWER_FINAL = 11;
     public int YHIGHER_FINAL = 12;
     public int YLOWER_FINAL = 13;
+    public int ANTS_PREVIOUS = 14;
+    public int ANTS_CURRENT = 15;
+    public int ANTS_COCOON = 16;
+    public int BEES_PREVIOUS = 17;
+    public int BEES_CURRENT = 18;
+    public int BEES_COCOON = 19;
+    public int BEETLES_PREVIOUS = 20;
+    public int BEETLES_CURRENT = 21;
+    public int BEETLES_COCOON = 22;
+    public int SPIDERS_PREVIOUS = 23;
+    public int SPIDERS_CURRENT = 24;
+    public int SPIDERS_COCOON = 25;
+
+
 
     public MemoryManager(UnitController uc) {
         this.uc = uc;
@@ -39,11 +54,13 @@ public class MemoryManager {
         dirs = Direction.values();
         myLocation = uc.getLocation();
         myType = uc.getType();
+        units = uc.senseUnits(allies);
     }
 
     public void update() {
         round = uc.getRound();
         myLocation = uc.getLocation();
+        units = uc.senseUnits(allies);
 
         // Root check
         uc.write(CURRENT_ROUND, round);
@@ -60,12 +77,24 @@ public class MemoryManager {
             rootUpdate();
         }
 
+        // Map update
         if (round == 0 && uc.read(FINAL_MAP_SIZE) == 0) {
             roundZeroInitialization();
             mapSizeUpdate();
         } else if (uc.read(FINAL_MAP_SIZE) == 0) {
             mapLimits();
             mapSizeUpdate();
+        }
+
+        // Unit counter update
+        if(uc.getType() == UnitType.ANT) {
+            uc.write(ANTS_CURRENT, uc.read(ANTS_CURRENT) + 1);
+        } else if(uc.getType() == UnitType.BEE) {
+            uc.write(BEES_CURRENT, uc.read(BEES_CURRENT) + 1);
+        } else if(uc.getType() == UnitType.BEETLE) {
+            uc.write(BEETLES_CURRENT, uc.read(BEETLES_CURRENT) + 1);
+        } else if(uc.getType() == UnitType.SPIDER) {
+            uc.write(SPIDERS_CURRENT, uc.read(SPIDERS_CURRENT) + 1);
         }
     }
 
@@ -74,6 +103,21 @@ public class MemoryManager {
             roundZeroRootInitialization();
         }
 
+        // Updates ants
+        uc.write(ANTS_PREVIOUS, uc.read(ANTS_CURRENT) + uc.read(ANTS_COCOON));
+        uc.write(ANTS_CURRENT, 0);
+
+        // Updates bees
+        uc.write(BEES_PREVIOUS, uc.read(BEES_CURRENT) + uc.read(BEES_COCOON));
+        uc.write(BEES_CURRENT, 0);
+
+        // Updates beetles
+        uc.write(BEETLES_PREVIOUS, uc.read(BEETLES_CURRENT) + uc.read(BEETLES_COCOON));
+        uc.write(BEETLES_CURRENT, 0);
+
+        // Updates spiders
+        uc.write(SPIDERS_PREVIOUS, uc.read(SPIDERS_CURRENT) + uc.read(SPIDERS_COCOON));
+        uc.write(SPIDERS_CURRENT, 0);
     }
 
     public void roundZeroRootInitialization() {
@@ -257,6 +301,39 @@ public class MemoryManager {
         }
 
         return range;
+    }
+
+    // Getters
+    public int getFinalMapSize() {
+        return uc.read(FINAL_MAP_SIZE);
+    }
+
+    public int getCurrentMapSize() {
+        return uc.read(CURRENT_MAP_SIZE);
+    }
+
+    public int getQueens() {
+        return uc.getMyQueensLocation().length;
+    }
+
+    public int getEnemyQuenns() {
+        return uc.getEnemyQueensLocation().length;
+    }
+
+    public int getAnts() {
+        return uc.read(ANTS_PREVIOUS);
+    }
+
+    public int getBees() {
+        return uc.read(BEES_PREVIOUS);
+    }
+
+    public int getBeetles() {
+        return uc.read(BEETLES_PREVIOUS);
+    }
+
+    public int getSpiders() {
+        return uc.read(SPIDERS_PREVIOUS);
     }
 
 }
