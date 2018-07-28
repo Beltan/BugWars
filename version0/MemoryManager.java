@@ -60,7 +60,7 @@ public class MemoryManager {
             rootUpdate();
         }
 
-        if (round == 0) {
+        if (round == 0 && uc.read(FINAL_MAP_SIZE) == 0) {
             roundZeroInitialization();
             mapSizeUpdate();
         } else if (uc.read(FINAL_MAP_SIZE) == 0) {
@@ -79,20 +79,12 @@ public class MemoryManager {
     public void roundZeroRootInitialization() {
         Location myQueens[] = uc.getMyQueensLocation();
         Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location myQueen = myQueens[0];
+        Location enemyQueen = enemyQueens[0];
         int xLow = myQueens[0].x;
         int yLow = myQueens[0].y;
         int xHigh = myQueens[0].x;
         int yHigh = myQueens[0].y;
-
-        // Checks what kind of simmetry does the map have
-        if (myQueens[0].x == enemyQueens[0].x) {
-            uc.write(TEN_YCOORDINATE_CENTER,  10 * (myQueens[0].y - (myQueens[0].y - enemyQueens[0].y) / 2));
-        } else if (myQueens[0].y == enemyQueens[0].y) {
-            uc.write(TEN_XCOORDINATE_CENTER,  10 * (myQueens[0].x - (myQueens[0].x - enemyQueens[0].x) / 2));
-        } else {
-            uc.write(TEN_XCOORDINATE_CENTER,  10 * (myQueens[0].x - (myQueens[0].x - enemyQueens[0].x) / 2));
-            uc.write(TEN_YCOORDINATE_CENTER,  10 * (myQueens[0].y - (myQueens[0].y - enemyQueens[0].y) / 2));
-        }
 
         for (Location queen : myQueens) {
             if (xHigh < queen.x) {
@@ -124,6 +116,37 @@ public class MemoryManager {
         uc.write(XLOWER_BOUND, xLow);
         uc.write(YHIGHER_BOUND, yHigh);
         uc.write(YLOWER_BOUND, yLow);
+
+        // Checks what kind of simmetry does the map have
+        for (Location queen : myQueens) {
+            if (myQueen.x > queen.x) {
+                myQueen = queen;
+            } else if (myQueen.x == queen.x && myQueen.y > queen.y) {
+                myQueen = queen;
+            }
+        }
+
+        for (Location queen : enemyQueens) {
+            if (enemyQueen.x < queen.x) {
+                enemyQueen = queen;
+            } else if (enemyQueen.x == queen.x && enemyQueen.y < queen.y) {
+                enemyQueen = queen;
+            }
+        }
+
+        double coordinate;
+        if (myQueen.x == enemyQueen.x) {
+            coordinate = 10 * (myQueen.y - (myQueen.y - enemyQueen.y) / 2.0);
+            uc.write(TEN_YCOORDINATE_CENTER,  (int) coordinate);
+        } else if (myQueen.y == enemyQueen.y) {
+            coordinate = 10 * (myQueen.x - (myQueen.x - enemyQueen.x) / 2.0);
+            uc.write(TEN_XCOORDINATE_CENTER,  (int) coordinate);
+        } else {
+            coordinate = 10 * (myQueen.x - (myQueen.x - enemyQueen.x) / 2.0);
+            uc.write(TEN_XCOORDINATE_CENTER,  (int) coordinate);
+            coordinate = 10 * (myQueen.y - (myQueen.y - enemyQueen.y) / 2.0);
+            uc.write(TEN_YCOORDINATE_CENTER,  (int) coordinate);
+        }
     }
 
     // Checks if map limit is seen
@@ -142,12 +165,12 @@ public class MemoryManager {
             }
             Location newLoc2 = new Location(myLocation.x - i, myLocation.y);
             if (!found2 && uc.isOutOfMap(newLoc2)) {
-                uc.write(XLOWER_FINAL, newLoc1.x + 1);
+                uc.write(XLOWER_FINAL, newLoc2.x + 1);
                 found2 = true;
             }
             Location newLoc3 = new Location(myLocation.x, myLocation.y + i);
             if (!found3 && uc.isOutOfMap(newLoc3)) {
-                uc.write(YHIGHER_FINAL, newLoc1.y - 1);
+                uc.write(YHIGHER_FINAL, newLoc3.y - 1);
                 found3 = true;
             }
             Location newLoc4 = new Location(myLocation.x, myLocation.y - i);
@@ -167,10 +190,13 @@ public class MemoryManager {
         int xHighFinal = uc.read(XHIGHER_FINAL);
         int yHighFinal = uc.read(YHIGHER_FINAL);
 
+        double coordinate;
         if (xCenter != 0 && (xLowFinal != 0 || xHighFinal != 0)) {
-            uc.write(FINAL_MAP_SIZE, 2 * Math.abs((xCenter / 10) - Math.max(xLowFinal, xHighFinal)) + 1);
+            coordinate = 2 * Math.abs((xCenter / 10.0) - Math.max(xLowFinal, xHighFinal)) + 1;
+            uc.write(FINAL_MAP_SIZE, (int) coordinate);
         } else if (yCenter != 0 && (yLowFinal != 0 || yHighFinal != 0)) {
-            uc.write(FINAL_MAP_SIZE, 2 * Math.abs((yCenter / 10) - Math.max(yLowFinal, yHighFinal)) + 1);
+            coordinate = 2 * Math.abs((yCenter / 10.0) - Math.max(yLowFinal, yHighFinal)) + 1;
+            uc.write(FINAL_MAP_SIZE, (int) coordinate);
         } else {
             int xLow = uc.read(XLOWER_BOUND);
             int yLow = uc.read(YLOWER_BOUND);
