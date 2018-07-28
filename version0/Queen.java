@@ -7,6 +7,11 @@ public class Queen {
     private MemoryManager manager;
     private UnitController uc;
 
+    public Queen(MemoryManager manager) {
+        this.manager = manager;
+        uc = manager.uc;
+    }
+
     public void play() {
         tryHeal();
         tryMove();
@@ -20,7 +25,13 @@ public class Queen {
     }
 
     private void trySpawn() {
-
+        if (manager.canSpawnAnt()) {
+            for (Direction dir : manager.dirs) {
+                if (uc.canSpawn(dir, UnitType.ANT)) {
+                    uc.spawn(dir, UnitType.ANT);
+                }
+            }
+        }
     }
 
     private void tryHeal() {

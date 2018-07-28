@@ -5,16 +5,20 @@ import bugwars.*;
 public class UnitPlayer {
 
     public void run(UnitController uc) {
-	/*Insert here the code that should be executed only at the beginning of the unit's lifespan*/
+
+        // Insert here the code that should be executed only at the beginning of the unit's lifespan
+
         MemoryManager manager = new MemoryManager(uc);
-        Queen queen = new Queen();
-        Ant ant = new Ant();
-        Bee bee = new Bee();
-        Beetle beetle = new Beetle();
-        Spider spider = new Spider();
+
+        Queen queen = new Queen(manager);
+        Ant ant = new Ant(manager);
+        Bee bee = new Bee(manager);
+        Beetle beetle = new Beetle(manager);
+        Spider spider = new Spider(manager);
 
         while (true){
-			/*Insert here the code that should be executed every round*/
+
+			// Insert here the code that should be executed every round
 
             manager.update();
 

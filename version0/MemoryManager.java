@@ -4,7 +4,6 @@ import bugwars.*;
 
 public class MemoryManager {
 
-    // Initialize parameters
     public UnitController uc;
     public boolean root;
     public int round;
@@ -14,6 +13,7 @@ public class MemoryManager {
     public Location myLocation;
     public UnitType myType;
     public UnitInfo[] units;
+    public FoodInfo[] food;
 
     // Shared memory
     // 0 to 99 are general information and states
@@ -55,12 +55,14 @@ public class MemoryManager {
         myLocation = uc.getLocation();
         myType = uc.getType();
         units = uc.senseUnits(allies);
+        food = uc.senseFood();
     }
 
     public void update() {
         round = uc.getRound();
         myLocation = uc.getLocation();
         units = uc.senseUnits(allies);
+        food = uc.senseFood();
 
         // Root check
         uc.write(CURRENT_ROUND, round);
@@ -106,18 +108,22 @@ public class MemoryManager {
         // Updates ants
         uc.write(ANTS_PREVIOUS, uc.read(ANTS_CURRENT) + uc.read(ANTS_COCOON));
         uc.write(ANTS_CURRENT, 0);
+        uc.write(ANTS_COCOON, 0);
 
         // Updates bees
         uc.write(BEES_PREVIOUS, uc.read(BEES_CURRENT) + uc.read(BEES_COCOON));
         uc.write(BEES_CURRENT, 0);
+        uc.write(BEES_COCOON, 0);
 
         // Updates beetles
         uc.write(BEETLES_PREVIOUS, uc.read(BEETLES_CURRENT) + uc.read(BEETLES_COCOON));
         uc.write(BEETLES_CURRENT, 0);
+        uc.write(BEETLES_COCOON, 0);
 
         // Updates spiders
         uc.write(SPIDERS_PREVIOUS, uc.read(SPIDERS_CURRENT) + uc.read(SPIDERS_COCOON));
         uc.write(SPIDERS_CURRENT, 0);
+        uc.write(SPIDERS_COCOON, 0);
     }
 
     public void roundZeroRootInitialization() {
@@ -161,7 +167,7 @@ public class MemoryManager {
         uc.write(YHIGHER_BOUND, yHigh);
         uc.write(YLOWER_BOUND, yLow);
 
-        // Checks what kind of simmetry does the map have
+        // Checks what kind of symmetry does the map have
         for (Location queen : myQueens) {
             if (myQueen.x > queen.x) {
                 myQueen = queen;
@@ -301,6 +307,47 @@ public class MemoryManager {
         }
 
         return range;
+    }
+
+    // Bad but good enough random directions
+    public Direction[] shuffle(Direction list[]) {
+        Direction shuffledList[] = new Direction[8];
+        int random;
+        for (int i = 0; i < 8; i++) {
+            random = (int )(Math.random() * 8);
+            if (shuffledList[random] == null) {
+                shuffledList[random] = list[i];
+            } else {
+                for (int j = 0; j < 8; j++) {
+                    if (shuffledList[(random + j) % 8] == null) {
+                        shuffledList[(random + j) % 8] = list[i];
+                        break;
+                    }
+                }
+            }
+
+        }
+        return shuffledList;
+    }
+
+    // Ant spawn conditions
+    public boolean canSpawnAnt() {
+        int foodCount = 0;
+        int maxFood = 0;
+
+        for (FoodInfo foodUnit : food) {
+            foodCount += foodUnit.food;
+            maxFood += foodUnit.initialFood;
+        }
+
+        int antCount = 0;
+        for (UnitInfo unit : units) {
+            if (unit.getType() == UnitType.ANT) {
+                antCount++;
+            }
+        }
+
+        return (foodCount * 2 > maxFood && antCount * 2 < food.length);
     }
 
     // Getters
