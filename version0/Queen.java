@@ -21,7 +21,19 @@ public class Queen {
     }
 
     private void tryMove() {
+        Direction idleDirection = manager.myLocation.directionTo(manager.getIdleFoodLocation());
+        if (uc.canMove(idleDirection)) {
+            uc.move(idleDirection);
+            return;
+        }
 
+        Direction randomDirections[] = manager.shuffle(manager.dirs);
+        for (Direction dir : randomDirections) {
+            if (uc.canMove(dir)) {
+                uc.move(dir);
+                return;
+            }
+        }
     }
 
     private void trySpawn() {

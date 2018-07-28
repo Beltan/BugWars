@@ -344,12 +344,16 @@ public class MemoryManager {
 
     // Ant spawn conditions
     public boolean canSpawnAnt() {
-        int foodCount = 0;
+        int foodHealth = 0;
         int maxFood = 0;
+        int foodCount = 0;
 
         for (FoodInfo foodUnit : food) {
-            foodCount += foodUnit.food;
+            foodHealth += foodUnit.food;
             maxFood += foodUnit.initialFood;
+            if (!uc.isObstructed(foodUnit.location, myLocation)) {
+                foodCount++;
+            }
         }
 
         int antCount = 0;
@@ -359,7 +363,7 @@ public class MemoryManager {
             }
         }
 
-        return (foodCount * 1.5 > maxFood && antCount * 2 < food.length);
+        return (foodHealth * 1.5 > maxFood && antCount * 2 < foodCount);
     }
 
     // Getters
