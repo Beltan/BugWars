@@ -37,13 +37,18 @@ public class Ant {
                     return;
                 }
             }
-        }
-
-        Direction randomDirections[] = manager.shuffle(manager.dirs);
-        for (Direction dir : randomDirections) {
-            if (uc.canMove(dir)) {
-                uc.move(dir);
-                return;
+        } else {
+            Direction idleDirection = manager.myLocation.directionTo(manager.getIdleFoodLocation());
+            if (uc.canMove(idleDirection)) {
+                uc.move(idleDirection);
+            } else {
+                Direction randomDirections[] = manager.shuffle(manager.dirs);
+                for (Direction dir : randomDirections) {
+                    if (uc.canMove(dir)) {
+                        uc.move(dir);
+                        return;
+                    }
+                }
             }
         }
     }
@@ -68,7 +73,6 @@ public class Ant {
 
             if (maxAmount != 0) {
                 uc.mine(bestFood);
-                return;
             }
         }
     }

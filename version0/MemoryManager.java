@@ -43,8 +43,9 @@ public class MemoryManager {
     public int SPIDERS_PREVIOUS = 23;
     public int SPIDERS_CURRENT = 24;
     public int SPIDERS_COCOON = 25;
-
-
+    public int XIDLE_FOOD = 26;
+    public int YIDLE_FOOD = 27;
+    public int IDLE_FOOD_HEALTH = 28;
 
     public MemoryManager(UnitController uc) {
         this.uc = uc;
@@ -97,6 +98,16 @@ public class MemoryManager {
             uc.write(BEETLES_CURRENT, uc.read(BEETLES_CURRENT) + 1);
         } else if(uc.getType() == UnitType.SPIDER) {
             uc.write(SPIDERS_CURRENT, uc.read(SPIDERS_CURRENT) + 1);
+        }
+
+        // Idle food update
+        int idleFoodHealth = getIdleFoodHealth();
+        for (FoodInfo foodUnit : food) {
+            if (idleFoodHealth < foodUnit.food) {
+                uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
+                uc.write(XIDLE_FOOD, foodUnit.location.x);
+                uc.write(YIDLE_FOOD, foodUnit.location.y);
+            }
         }
     }
 
@@ -313,6 +324,7 @@ public class MemoryManager {
     public Direction[] shuffle(Direction list[]) {
         Direction shuffledList[] = new Direction[8];
         int random;
+
         for (int i = 0; i < 8; i++) {
             random = (int )(Math.random() * 8);
             if (shuffledList[random] == null) {
@@ -325,8 +337,8 @@ public class MemoryManager {
                     }
                 }
             }
-
         }
+
         return shuffledList;
     }
 
@@ -347,7 +359,7 @@ public class MemoryManager {
             }
         }
 
-        return (foodCount * 2 > maxFood && antCount * 2 < food.length);
+        return (foodCount * 1.5 > maxFood && antCount * 2 < food.length);
     }
 
     // Getters
@@ -381,6 +393,14 @@ public class MemoryManager {
 
     public int getSpiders() {
         return uc.read(SPIDERS_PREVIOUS);
+    }
+
+    public Location getIdleFoodLocation() {
+        return new Location(uc.read(XIDLE_FOOD), uc.read(YIDLE_FOOD));
+    }
+
+    public int getIdleFoodHealth() {
+        return uc.read(IDLE_FOOD_HEALTH);
     }
 
 }
