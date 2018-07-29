@@ -20,6 +20,7 @@ public class Ant {
 
     private void tryMove() {
         int maxAmount = 0;
+        Location foodLoc = manager.getIdleFoodLocation();
         if (manager.food.length != 0) {
             FoodInfo bestFood = manager.food[0];
 
@@ -37,12 +38,9 @@ public class Ant {
                     return;
                 }
             }
-        } else {
-            Direction idleDirection = manager.myLocation.directionTo(manager.getIdleFoodLocation());
-            if (uc.canMove(idleDirection)) {
-                uc.move(idleDirection);
-                return;
-            }
+        } else if (foodLoc.x != 0 ||foodLoc.y != 0){
+            manager.path.moveTo(foodLoc);
+            return;
         }
 
         Direction randomDirections[] = manager.shuffle(manager.dirs);

@@ -15,6 +15,7 @@ public class MemoryManager {
     public UnitInfo[] units;
     public FoodInfo[] food;
     public UnitInfo[] cocoon;
+    public Pathfinder path;
 
     // Shared memory
     // 0 to 99 are general information and states
@@ -63,6 +64,7 @@ public class MemoryManager {
         units = uc.senseUnits(allies);
         food = uc.senseFood();
         cocoon = new UnitInfo[10];
+        path = new Pathfinder(this);
     }
 
     public void update() {
@@ -111,21 +113,24 @@ public class MemoryManager {
         Location idleFoodLocation = getIdleFoodLocation();
         int xLoc = idleFoodLocation.x;
         int yLoc = idleFoodLocation.y;
-        if (uc.canSenseLocation(idleFoodLocation)) {
-            UnitInfo unit = uc.senseUnit(idleFoodLocation);
-            if (unit != null) {
-                idleFoodHealth = 0;
-            }
-        }
-        for (FoodInfo foodUnit : food) {
-            if (idleFoodHealth < foodUnit.food) {
-                idleFoodHealth = foodUnit.food;
-                xLoc = foodUnit.location.x;
-                yLoc = foodUnit.location.y;
+
+        if (myLocation.isEqual(idleFoodLocation) || (uc.canSenseLocation(idleFoodLocation) && uc.senseUnit(idleFoodLocation) != null)) {
+            idleFoodHealth = 0;
+        } else {
+            for (FoodInfo foodUnit : food) {
+                if (foodUnit.food == foodUnit.initialFood && idleFoodHealth < foodUnit.food) {
+                    idleFoodHealth = foodUnit.food;
+                    xLoc = foodUnit.location.x;
+                    yLoc = foodUnit.location.y;
+                }
             }
         }
 
-        if (idleFoodHealth != getIdleFoodHealth()) {
+        if (idleFoodHealth == 0) {
+            uc.write(IDLE_FOOD_HEALTH, 0);
+            uc.write(XIDLE_FOOD, 0);
+            uc.write(YIDLE_FOOD, 0);
+        } else if (idleFoodHealth != getIdleFoodHealth()) {
             uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
             uc.write(XIDLE_FOOD, xLoc);
             uc.write(YIDLE_FOOD, yLoc);
@@ -390,9 +395,18 @@ public class MemoryManager {
             }
         }
 
-        return (foodHealth * 1.5 > maxFood && antCount * 2.5 < foodCount);
+        int cocoonAnts = getAntsCocoon();
+        antCount -= cocoonAnts;
+
+        return ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
+                (foodHealth * 1.3 > maxFood && antCount * 2.5 + 4 * cocoonAnts < foodCount) ||
+                (foodHealth * 1.2 > maxFood && antCount * 2.0 + 4 * cocoonAnts < foodCount) ||
+                (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount) ||
+                (foodHealth * 1.05 > maxFood && antCount * 1.1 + 4 * cocoonAnts < foodCount)) &&
+                (foodCount != 1 || maxFood != foodHealth);
     }
 
+    // Add a new cocoon
     public void addCocoonList(Location targetLocation) {
         for (int i = INITIAL_COCOON_LIST; i <= FINAL_COCOON_LIST; i++) {
             if (uc.read(i) == 0) {
@@ -413,6 +427,7 @@ public class MemoryManager {
         }
     }
 
+    // Remove an existing cocoon
     public void removeCocoonList(int ID) {
         if (myType == UnitType.QUEEN) {
             return;
@@ -454,6 +469,10 @@ public class MemoryManager {
 
     public int getAnts() {
         return uc.read(ANTS_PREVIOUS);
+    }
+
+    public int getAntsCocoon() {
+        return uc.read(ANTS_COCOON);
     }
 
     public int getBees() {

@@ -52,11 +52,17 @@ public class Pathfinder {
                 return;
             }
             Location newLoc = manager.myLocation.add(dir);
-            if (uc.isOutOfMap(newLoc)) rotateRight = !rotateRight;
+            if (uc.isOutOfMap(newLoc)) {
+                rotateRight = !rotateRight;
+            } else {
                 //If I could not go in that direction and it was not outside of the map, then this is the latest obstacle found
-            else lastObstacleFound = manager.myLocation.add(dir);
-            if (rotateRight) dir = dir.rotateRight();
-            else dir = dir.rotateLeft();
+                Location possibleObstacle = manager.myLocation.add(dir);
+                if (uc.senseUnit(possibleObstacle) == null){
+                    lastObstacleFound = manager.myLocation.add(dir);
+                    if (rotateRight) dir = dir.rotateRight();
+                    else dir = dir.rotateLeft();
+                }
+            }
         }
 
         if (uc.canMove(dir)) uc.move(dir);

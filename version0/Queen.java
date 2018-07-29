@@ -6,11 +6,9 @@ public class Queen {
 
     private MemoryManager manager;
     private UnitController uc;
-    private Pathfinder path;
 
-    public Queen(MemoryManager manager, Pathfinder path) {
+    public Queen(MemoryManager manager) {
         this.manager = manager;
-        this.path = path;
         uc = manager.uc;
     }
 
@@ -22,12 +20,31 @@ public class Queen {
     }
 
     private void tryMove() {
-        path.moveTo(manager.getIdleFoodLocation());
+        Location foodLoc = manager.getIdleFoodLocation();
+        if (foodLoc.x != 0 || foodLoc.y != 0) {
+            manager.path.moveTo(foodLoc);
+        } else {
+            manager.path.moveTo(uc.getEnemyQueensLocation()[0]);
+        }
         manager.myLocation = uc.getLocation();
     }
 
     private void trySpawn() {
         if (manager.canSpawnAnt()) {
+            Direction target;
+            Location idleFood = manager.getIdleFoodLocation();
+            if (idleFood.x != 0 && idleFood.y != 0) {
+                target = idleFood.directionTo(manager.myLocation);
+            } else {
+                target = uc.getEnemyQueensLocation()[0].directionTo(manager.myLocation);
+            }
+
+            if (uc.canSpawn(target, UnitType.ANT)) {
+                uc.spawn(target, UnitType.ANT);
+                manager.addCocoonList(manager.myLocation.add(target));
+                return;
+            }
+
             for (Direction dir : manager.dirs) {
                 if (uc.canSpawn(dir, UnitType.ANT)) {
                     uc.spawn(dir, UnitType.ANT);

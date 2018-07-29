@@ -11,7 +11,7 @@ public class UnitPlayer {
         MemoryManager manager = new MemoryManager(uc);
         Pathfinder path = new Pathfinder(manager);
 
-        Queen queen = new Queen(manager, path);
+        Queen queen = new Queen(manager);
         Ant ant = new Ant(manager);
         Bee bee = new Bee(manager);
         Beetle beetle = new Beetle(manager);
