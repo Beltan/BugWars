@@ -19,7 +19,6 @@ public class Queen {
         trySpawn();
         tryMove();
         tryHeal();
-        cocoonCount();
     }
 
     private void tryMove() {
@@ -32,6 +31,7 @@ public class Queen {
             for (Direction dir : manager.dirs) {
                 if (uc.canSpawn(dir, UnitType.ANT)) {
                     uc.spawn(dir, UnitType.ANT);
+                    manager.addCocoonList(manager.myLocation.add(dir));
                     break;
                 }
             }
@@ -41,22 +41,4 @@ public class Queen {
     private void tryHeal() {
 
     }
-
-    private void cocoonCount() {
-        for (UnitInfo unit : manager.units) {
-            if (unit.isCocoon()) {
-                UnitType cocoonType = unit.getType();
-                if (cocoonType == UnitType.ANT) {
-                    uc.write(manager.ANTS_COCOON, uc.read(manager.ANTS_COCOON) + 1);
-                } else if (cocoonType == UnitType.BEE) {
-                    uc.write(manager.BEES_COCOON, uc.read(manager.BEES_COCOON) + 1);
-                } else if (cocoonType == UnitType.BEETLE) {
-                    uc.write(manager.BEETLES_COCOON, uc.read(manager.BEETLES_COCOON) + 1);
-                } else if (cocoonType == UnitType.SPIDER) {
-                    uc.write(manager.SPIDERS_COCOON, uc.read(manager.SPIDERS_COCOON) + 1);
-                }
-            }
-        }
-    }
-
 }

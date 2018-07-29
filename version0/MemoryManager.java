@@ -14,6 +14,7 @@ public class MemoryManager {
     public UnitType myType;
     public UnitInfo[] units;
     public FoodInfo[] food;
+    public UnitInfo[] cocoon;
 
     // Shared memory
     // 0 to 99 are general information and states
@@ -47,6 +48,10 @@ public class MemoryManager {
     public int YIDLE_FOOD = 27;
     public int IDLE_FOOD_HEALTH = 28;
 
+    // 100 to 129 are cocoon IDs
+    public int INITIAL_COCOON_LIST = 100;
+    public int FINAL_COCOON_LIST = 129;
+
     public MemoryManager(UnitController uc) {
         this.uc = uc;
         round = uc.getRound();
@@ -57,6 +62,7 @@ public class MemoryManager {
         myType = uc.getType();
         units = uc.senseUnits(allies);
         food = uc.senseFood();
+        cocoon = new UnitInfo[10];
     }
 
     public void update() {
@@ -134,22 +140,18 @@ public class MemoryManager {
         // Updates ants
         uc.write(ANTS_PREVIOUS, uc.read(ANTS_CURRENT) + uc.read(ANTS_COCOON));
         uc.write(ANTS_CURRENT, 0);
-        uc.write(ANTS_COCOON, 0);
 
         // Updates bees
         uc.write(BEES_PREVIOUS, uc.read(BEES_CURRENT) + uc.read(BEES_COCOON));
         uc.write(BEES_CURRENT, 0);
-        uc.write(BEES_COCOON, 0);
 
         // Updates beetles
         uc.write(BEETLES_PREVIOUS, uc.read(BEETLES_CURRENT) + uc.read(BEETLES_COCOON));
         uc.write(BEETLES_CURRENT, 0);
-        uc.write(BEETLES_COCOON, 0);
 
         // Updates spiders
         uc.write(SPIDERS_PREVIOUS, uc.read(SPIDERS_CURRENT) + uc.read(SPIDERS_COCOON));
         uc.write(SPIDERS_CURRENT, 0);
-        uc.write(SPIDERS_COCOON, 0);
     }
 
     public void roundZeroRootInitialization() {
@@ -389,6 +391,48 @@ public class MemoryManager {
         }
 
         return (foodHealth * 1.5 > maxFood && antCount * 2.5 < foodCount);
+    }
+
+    public void addCocoonList(Location targetLocation) {
+        for (int i = INITIAL_COCOON_LIST; i <= FINAL_COCOON_LIST; i++) {
+            if (uc.read(i) == 0) {
+                UnitInfo targetCocoon = uc.senseUnit(targetLocation);
+                uc.write(i, targetCocoon.getID());
+                UnitType cocoonType = targetCocoon.getType();
+                if (cocoonType == UnitType.ANT) {
+                    uc.write(ANTS_COCOON, uc.read(ANTS_COCOON) + 1);
+                } else if (cocoonType == UnitType.BEE) {
+                    uc.write(BEES_COCOON, uc.read(BEES_COCOON) + 1);
+                } else if (cocoonType == UnitType.BEETLE) {
+                    uc.write(BEETLES_COCOON, uc.read(BEETLES_COCOON) + 1);
+                } else if (cocoonType == UnitType.SPIDER) {
+                    uc.write(SPIDERS_COCOON, uc.read(SPIDERS_COCOON) + 1);
+                }
+                return;
+            }
+        }
+    }
+
+    public void removeCocoonList(int ID) {
+        if (myType == UnitType.QUEEN) {
+            return;
+        }
+        for (int i = INITIAL_COCOON_LIST; i <= FINAL_COCOON_LIST; i++) {
+            if (uc.read(i) == ID) {
+                uc.write(i, 0);
+                UnitType cocoonType = myType;
+                if (cocoonType == UnitType.ANT) {
+                    uc.write(ANTS_COCOON, uc.read(ANTS_COCOON) - 1);
+                } else if (cocoonType == UnitType.BEE) {
+                    uc.write(BEES_COCOON, uc.read(BEES_COCOON) - 1);
+                } else if (cocoonType == UnitType.BEETLE) {
+                    uc.write(BEETLES_COCOON, uc.read(BEETLES_COCOON) - 1);
+                } else if (cocoonType == UnitType.SPIDER) {
+                    uc.write(SPIDERS_COCOON, uc.read(SPIDERS_COCOON) - 1);
+                }
+                return;
+            }
+        }
     }
 
     // Getters

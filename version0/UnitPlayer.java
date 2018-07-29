@@ -17,6 +17,8 @@ public class UnitPlayer {
         Beetle beetle = new Beetle(manager);
         Spider spider = new Spider(manager);
 
+        manager.removeCocoonList(uc.getInfo().getID());
+
         while (true){
 
 			// Insert here the code that should be executed every round
