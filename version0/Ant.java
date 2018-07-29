@@ -32,22 +32,17 @@ public class Ant {
             }
 
             if (!manager.myLocation.isEqual(bestFood.location)) {
-                Direction bestDirection = manager.myLocation.directionTo(bestFood.location);
-                if (uc.canMove(bestDirection)) {
-                    uc.move(bestDirection);
-                    return;
-                }
+                manager.path.moveTo(bestFood.location);
             }
         } else if (foodLoc.x != 0 ||foodLoc.y != 0){
             manager.path.moveTo(foodLoc);
-            return;
         }
 
         Direction randomDirections[] = manager.shuffle(manager.dirs);
         for (Direction dir : randomDirections) {
             if (uc.canMove(dir)) {
                 uc.move(dir);
-                return;
+                break;
             }
         }
     }

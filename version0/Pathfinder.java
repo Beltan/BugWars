@@ -49,7 +49,7 @@ public class Pathfinder {
         for (int i = 0; i < 16; ++i){
             if (uc.canMove(dir)){
                 uc.move(dir);
-                return;
+                break;
             }
             Location newLoc = manager.myLocation.add(dir);
             if (uc.isOutOfMap(newLoc)) {
