@@ -102,12 +102,27 @@ public class MemoryManager {
 
         // Idle food update
         int idleFoodHealth = getIdleFoodHealth();
+        Location idleFoodLocation = getIdleFoodLocation();
+        int xLoc = idleFoodLocation.x;
+        int yLoc = idleFoodLocation.y;
+        if (uc.canSenseLocation(idleFoodLocation)) {
+            UnitInfo unit = uc.senseUnit(idleFoodLocation);
+            if (unit != null) {
+                idleFoodHealth = 0;
+            }
+        }
         for (FoodInfo foodUnit : food) {
             if (idleFoodHealth < foodUnit.food) {
-                uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
-                uc.write(XIDLE_FOOD, foodUnit.location.x);
-                uc.write(YIDLE_FOOD, foodUnit.location.y);
+                idleFoodHealth = foodUnit.food;
+                xLoc = foodUnit.location.x;
+                yLoc = foodUnit.location.y;
             }
+        }
+
+        if (idleFoodHealth != getIdleFoodHealth()) {
+            uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
+            uc.write(XIDLE_FOOD, xLoc);
+            uc.write(YIDLE_FOOD, yLoc);
         }
     }
 
@@ -347,11 +362,21 @@ public class MemoryManager {
         int foodHealth = 0;
         int maxFood = 0;
         int foodCount = 0;
+        Direction dir;
+        Location origin;
 
         for (FoodInfo foodUnit : food) {
-            foodHealth += foodUnit.food;
-            maxFood += foodUnit.initialFood;
-            if (!uc.isObstructed(foodUnit.location, myLocation)) {
+            if (foodUnit.location.isEqual(myLocation)) {
+                continue;
+            }
+            dir = myLocation.directionTo(foodUnit.location);
+            origin = myLocation.add(dir);
+            if (uc.senseObstacle(origin).getDurability() != 0) {
+                continue;
+            }
+            if (!uc.isObstructed(origin, foodUnit.location)) {
+                foodHealth += foodUnit.food;
+                maxFood += foodUnit.initialFood;
                 foodCount++;
             }
         }
@@ -363,7 +388,7 @@ public class MemoryManager {
             }
         }
 
-        return (foodHealth * 1.5 > maxFood && antCount * 2 < foodCount);
+        return (foodHealth * 1.5 > maxFood && antCount * 2.5 < foodCount);
     }
 
     // Getters

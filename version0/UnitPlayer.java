@@ -9,8 +9,9 @@ public class UnitPlayer {
         // Insert here the code that should be executed only at the beginning of the unit's lifespan
 
         MemoryManager manager = new MemoryManager(uc);
+        Pathfinder path = new Pathfinder(manager);
 
-        Queen queen = new Queen(manager);
+        Queen queen = new Queen(manager, path);
         Ant ant = new Ant(manager);
         Bee bee = new Bee(manager);
         Beetle beetle = new Beetle(manager);
