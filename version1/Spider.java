@@ -19,7 +19,7 @@ public class Spider {
     }
 
     private void tryMove() {
-        if (manager.enemies.length == 0) {
+        if (manager.enemies.length == 0 || manager.allObstructed()) {
             Location targetQueen = manager.closestEnemyQueen();
             manager.path.moveTo(targetQueen);
         } else {

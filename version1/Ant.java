@@ -13,17 +13,17 @@ public class Ant {
     }
 
     public void play() {
+        tryAttack();
         tryHarvest();
         tryMove();
+        tryAttack();
         tryHarvest();
     }
 
     private void tryMove() {
         int maxAmount = 0;
         Location foodLoc = manager.getIdleFoodLocation();
-        if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            evalLocation();
-        } else if (manager.food.length != 0) {
+        if (manager.food.length != 0) {
             FoodInfo bestFood = manager.food[0];
 
             for (FoodInfo food : manager.food) {
@@ -73,33 +73,25 @@ public class Ant {
         }
     }
 
-    private void evalLocation() {
-        if (!uc.canMove()) return;
+    private void tryAttack() {
+        if (!uc.canAttack() || manager.enemies.length == 0) {
+            return;
+        }
 
-        Direction bestDirection = manager.dirs[8];
-        int bestValue = -100000;
+        int smallestHealth = 1000000;
+        int health;
+        UnitInfo lowestEnemy = manager.enemies[0];
 
-        for (int i = 0; i < manager.dirs.length; i++) {
-            Location newLoc = manager.myLocation.add(manager.dirs[i]);
-            if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
-                int value = 0;
-                for (int j = 0; j < manager.enemies.length; j++) {
-                    Location target = manager.enemies[j].getLocation();
-                    if (!manager.isObstructed(target)) {
-                        int distance = newLoc.distanceSquared(target);
-                        value += distance * distance;
-                    }
-                }
-
-                if (value >= bestValue) {
-                    bestDirection = manager.dirs[i];
-                    bestValue = value;
-                }
+        for (UnitInfo enemy : manager.enemies) {
+            health = enemy.getHealth();
+            if (uc.canAttack(enemy) && health < smallestHealth) {
+                smallestHealth = health;
+                lowestEnemy = enemy;
             }
         }
 
-        if (bestValue != -100000) {
-            uc.move(bestDirection);
+        if (smallestHealth != 1000000) {
+            uc.attack(lowestEnemy);
         }
     }
 }

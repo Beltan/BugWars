@@ -443,11 +443,11 @@ public class MemoryManager {
 
 
     public boolean canSpawnBeetle() {
-        return (getSpiders() >= getBeetles() || (enemies.length != 0 && !allObstructed()));
+        return (2 * getSpiders() + 1 >= getBeetles() || (enemies.length != 0 && !allObstructed()));
     }
 
     public boolean canSpawnSpider() {
-        return getSpiders() < getBeetles();
+        return 2 * getSpiders() + 1 < getBeetles();
     }
 
     // Add a new cocoon
