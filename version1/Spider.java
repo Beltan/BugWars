@@ -19,12 +19,26 @@ public class Spider {
     }
 
     private void tryMove() {
-        if (manager.enemies.length == 0 || manager.allObstructed()) {
-            Location targetQueen = manager.closestEnemyQueen();
-            manager.path.moveTo(targetQueen);
+        Location myQueen = manager.closestAllyQueen();
+        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType)) {
+            if (manager.myLocation.distanceSquared(myQueen) > 5) {
+                manager.path.moveTo(myQueen);
+            }
+        } else if (uc.getInfo().getHealth() * 3 < manager.unitHealth(manager.myType) * 2 && manager.myLocation.distanceSquared(myQueen) < 6) {
+            if (!manager.isObstructed(myQueen)) {
+                evalLocation();
+            } else {
+                manager.path.moveTo(myQueen);
+            }
         } else {
-            evalLocation();
+            if (manager.enemies.length == 0 || manager.allObstructed()) {
+                Location targetQueen = manager.closestEnemyQueen();
+                manager.path.moveTo(targetQueen);
+            } else {
+                evalLocation();
+            }
         }
+        manager.enemies = uc.senseUnits(manager.opponent);
     }
 
     private void tryAttack() {
@@ -46,6 +60,13 @@ public class Spider {
 
         if (smallestHealth != 1000000) {
             uc.attack(lowestEnemy);
+        } else if (manager.allObstructed()) {
+            for (RockInfo rock : manager.rocks) {
+                if (uc.canAttack(rock)) {
+                    uc.attack(rock);
+                    break;
+                }
+            }
         }
     }
 

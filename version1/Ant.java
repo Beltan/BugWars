@@ -47,6 +47,7 @@ public class Ant {
                 }
             }
         }
+        manager.enemies = uc.senseUnits(manager.opponent);
     }
 
     private void tryHarvest() {
@@ -92,6 +93,13 @@ public class Ant {
 
         if (smallestHealth != 1000000) {
             uc.attack(lowestEnemy);
+        } else if (manager.allObstructed()) {
+            for (RockInfo rock : manager.rocks) {
+                if (uc.canAttack(rock)) {
+                    uc.attack(rock);
+                    break;
+                }
+            }
         }
     }
 }

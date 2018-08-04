@@ -19,6 +19,7 @@ public class MemoryManager {
     public Location bestFood;
     public int bestFoodHealth;
     public UnitType objective;
+    public RockInfo[] rocks;
     public Pathfinder path;
 
     // Shared memory
@@ -77,6 +78,7 @@ public class MemoryManager {
         bestFoodHealth = 0;
         cocoon = new UnitInfo[10];
         objective = UnitType.ANT;
+        rocks = uc.senseObstacles();
         path = new Pathfinder(this);
     }
 
@@ -86,6 +88,7 @@ public class MemoryManager {
         units = uc.senseUnits(allies);
         enemies = uc.senseUnits(opponent);
         food = uc.senseFood();
+        rocks = uc.senseObstacles();
 
         // Root check
         uc.write(CURRENT_ROUND, round);
@@ -377,6 +380,24 @@ public class MemoryManager {
         return range;
     }
 
+    public int unitHealth(UnitType ally) {
+        int health = 0;
+
+        if (ally == UnitType.QUEEN) {
+            health = GameConstants.QUEEN_MAX_HEALTH;
+        } else if (ally == UnitType.ANT) {
+            health = GameConstants.ANT_MAX_HEALTH;
+        } else if (ally == UnitType.BEE) {
+            health = GameConstants.BEE_MAX_HEALTH;
+        } else if (ally == UnitType.BEETLE) {
+            health = GameConstants.BEETLE_MAX_HEALTH;
+        } else if (ally == UnitType.SPIDER) {
+            health = GameConstants.SPIDER_MAX_HEALTH;
+        }
+
+        return health;
+    }
+
     // Bad but good enough random directions
     public Direction[] shuffle(Direction list[]) {
         Direction shuffledList[] = new Direction[8];
@@ -431,8 +452,7 @@ public class MemoryManager {
             }
         }
 
-        return (objective == UnitType.ANT && (foodCount != 1 || maxFood == foodHealth) &&
-                (getSpawnSoldiersRound() > round) &&
+        return (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) || getTotalTroops() > getAnts() + 10) && (foodCount != 1 || maxFood == foodHealth) &&
                 ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.3 > maxFood && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.15 > maxFood && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
@@ -538,6 +558,24 @@ public class MemoryManager {
         return closest;
     }
 
+    public Location closestAllyQueen() {
+        Location allyQueens[] = uc.getMyQueensLocation();
+        if (allyQueens.length == 0) {
+            return null;
+        }
+        int smallestDistance = 1000000;
+        int distance;
+        Location closest = allyQueens[0];
+        for (Location allyQueen : allyQueens) {
+            distance = myLocation.distanceSquared(allyQueen);
+            if (distance < smallestDistance) {
+                smallestDistance = distance;
+                closest = allyQueen;
+            }
+        }
+        return closest;
+    }
+
     public boolean isObstructed(Location target) {
         Direction dir = myLocation.directionTo(target);
         Location origin = myLocation.add(dir);
@@ -551,14 +589,14 @@ public class MemoryManager {
     }
 
     public boolean allObstructed() {
-        boolean obstruced = true;
+        boolean obstructed = true;
         for (UnitInfo enemy : enemies) {
             if (!isObstructed(enemy.getLocation())) {
-                obstruced = false;
+                obstructed = false;
                 break;
             }
         }
-        return obstruced;
+        return obstructed;
     }
 
     // Updates current objective
@@ -566,6 +604,15 @@ public class MemoryManager {
         if (myLocation.isEqual(getAllowed()) && round >= getSpawnSoldiersRound()) {
             objective = UnitType.BEETLE;
         }
+    }
+
+    public boolean isExtreme(Location target) {
+        for (Direction dir : dirs) {
+            if (uc.isOutOfMap(target.add(dir))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Getters
@@ -618,7 +665,7 @@ public class MemoryManager {
     }
 
     public int getTotalTroops() {
-        return uc.read(ANTS_PREVIOUS) + uc.read(BEES_PREVIOUS) + uc.read(BEETLES_PREVIOUS) + uc.read(SPIDERS_PREVIOUS);
+        return uc.read(BEES_PREVIOUS) + uc.read(BEETLES_PREVIOUS) + uc.read(SPIDERS_PREVIOUS);
     }
 
     public Location getIdleFoodLocation() {

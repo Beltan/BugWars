@@ -21,16 +21,27 @@ public class Queen {
 
     private void tryMove() {
         Location foodLoc = manager.getIdleFoodLocation();
-        if (manager.enemies.length != 0 && !manager.allObstructed()) {
+        if (manager.isExtreme(manager.myLocation)) {
+            if (manager.myLocation.isEqual(foodLoc)) {
+                manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
+            } else if (manager.bestFood != null) {
+                manager.path.moveToQueen(manager.bestFood);
+            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+                manager.path.moveToQueen(foodLoc);
+            } else {
+                evalLocation();
+            }
+        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();
         } else if (manager.bestFood != null) {
-            manager.path.moveTo(manager.bestFood);
+            manager.path.moveToQueen(manager.bestFood);
         } else if (foodLoc.x != 0 || foodLoc.y != 0) {
-            manager.path.moveTo(foodLoc);
+            manager.path.moveToQueen(foodLoc);
         } else {
-            manager.path.moveTo(uc.getEnemyQueensLocation()[0]);
+            manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
         }
         manager.myLocation = uc.getLocation();
+        manager.enemies = uc.senseUnits(manager.opponent);
     }
 
     private void trySpawn() {
@@ -88,6 +99,9 @@ public class Queen {
             Location newLoc = manager.myLocation.add(manager.dirs[i]);
             if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
                 int value = 0;
+                if (manager.isExtreme(newLoc)) {
+                    value -= 100;
+                }
                 for (int j = 0; j < manager.enemies.length; j++) {
                     Location target = manager.enemies[j].getLocation();
                     if (!manager.isObstructed(target)) {
@@ -115,7 +129,8 @@ public class Queen {
         UnitInfo bestTarget = null;
         for (UnitInfo ally : manager.units) {
             int health = ally.getHealth();
-            if (uc.canHeal(ally) && health < lowestHealth) {
+            int maxHealth = manager.unitHealth(ally.getType());
+            if (uc.canHeal(ally) && health < lowestHealth && maxHealth != health) {
                 lowestHealth = health;
                 bestTarget = ally;
             }

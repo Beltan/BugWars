@@ -19,33 +19,56 @@ public class Beetle {
     }
 
     private void tryMove() {
-        if (manager.enemies.length == 0 || manager.allObstructed()) {
-            Location targetQueen = manager.closestEnemyQueen();
-            manager.path.moveTo(targetQueen);
+        Location myQueen = manager.closestAllyQueen();
+        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType)) {
+            if (manager.myLocation.distanceSquared(myQueen) > 5) {
+                manager.path.moveTo(myQueen);
+            }
+        } else if (uc.getInfo().getHealth() * 3 < manager.unitHealth(manager.myType) * 2 && manager.myLocation.distanceSquared(myQueen) < 6) {
+            if (!manager.isObstructed(myQueen)) {
+                evalLocation();
+            } else {
+                manager.path.moveTo(myQueen);
+            }
         } else {
-            evalLocation();
+            if (manager.enemies.length == 0 || manager.allObstructed()) {
+                Location targetQueen = manager.closestEnemyQueen();
+                manager.path.moveTo(targetQueen);
+            } else {
+                evalLocation();
+            }
         }
+        manager.enemies = uc.senseUnits(manager.opponent);
     }
 
     private void tryAttack() {
-        if (!uc.canAttack() || manager.enemies.length == 0) {
+        if (!uc.canAttack() || (manager.enemies.length == 0 && manager.rocks.length == 0)) {
             return;
         }
 
-        int smallestHealth = 1000000;
-        int health;
-        UnitInfo lowestEnemy = manager.enemies[0];
+        if (manager.enemies.length != 0) {
+            int smallestHealth = 1000000;
+            int health;
+            UnitInfo lowestEnemy = manager.enemies[0];
 
-        for (UnitInfo enemy : manager.enemies) {
-            health = enemy.getHealth();
-            if (uc.canAttack(enemy) && health < smallestHealth) {
-                smallestHealth = health;
-                lowestEnemy = enemy;
+            for (UnitInfo enemy : manager.enemies) {
+                health = enemy.getHealth();
+                if (uc.canAttack(enemy) && health < smallestHealth) {
+                    smallestHealth = health;
+                    lowestEnemy = enemy;
+                }
             }
-        }
 
-        if (smallestHealth != 1000000) {
-            uc.attack(lowestEnemy);
+            if (smallestHealth != 1000000) {
+                uc.attack(lowestEnemy);
+            }
+        } else if (manager.allObstructed()) {
+            for (RockInfo rock : manager.rocks) {
+                if (uc.canAttack(rock)) {
+                    uc.attack(rock);
+                    break;
+                }
+            }
         }
     }
 
@@ -66,9 +89,9 @@ public class Beetle {
                         if (distance < 3) {
                             value -= 100;
                         } else if (distance < 6) {
-                            value += 20;
+                            value += 100;
                         } else {
-                            value -= distance * distance;
+                            value -= distance;
                         }
                     }
                 }
