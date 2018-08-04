@@ -98,14 +98,26 @@ public class Bee {
         Direction bestDirection = manager.dirs[8];
         int bestValue = -100000;
 
+        int enemies = 0;
+        int allies = 0;
+        if (manager.units != null) {
+            allies = manager.units.length;
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT) {
+                enemies++;
+            }
+        }
+
         for (int i = 0; i < manager.dirs.length; i++) {
             Location newLoc = manager.myLocation.add(manager.dirs[i]);
             if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
                 int value = 0;
                 for (int j = 0; j < manager.enemies.length; j++) {
                     Location target = manager.enemies[j].getLocation();
-                    if (!manager.isObstructed(target)) {
-                        int distance = newLoc.distanceSquared(target);
+                    int distance = newLoc.distanceSquared(target);
+                    if (!manager.isObstructed(target) && allies >= enemies) {
                         if (distance < 3) {
                             value -= 100;
                         } else if (distance < 6) {
@@ -113,6 +125,8 @@ public class Bee {
                         } else {
                             value -= distance;
                         }
+                    } else {
+                        value += distance;
                     }
                 }
 
