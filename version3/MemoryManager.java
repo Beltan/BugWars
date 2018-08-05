@@ -576,7 +576,7 @@ public class MemoryManager {
     // Sets the minimum round before a soldier can be spawn
     public void soldierRoundSpawn() {
         if (getEnemySeenLastRound() == 1) {
-            uc.write(SPAWN_SOLDIERS_ROUND, round);
+            uc.write(SPAWN_SOLDIERS_ROUND, round - 1);
             return;
         }
 

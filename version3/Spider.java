@@ -96,7 +96,7 @@ public class Spider {
                             value += 100;
                         } else if (distance > 17) {
                             value += 10;
-                        } else if (distance < 9) {
+                        } else if (distance < 10) {
                             value -= 1000;
                         } else if (distance < 14) {
                             value -= 75;

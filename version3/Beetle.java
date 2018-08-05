@@ -117,7 +117,7 @@ public class Beetle {
                 int value = 0;
                 int counter = 0;
                 for (int j = 0; j < manager.enemies.length; j++) {
-                    if (manager.enemies[j].getType() == UnitType.QUEEN) {
+                    if (manager.enemies[j].getType() == UnitType.QUEEN && manager.enemies.length != 1) {
                         continue;
                     }
                     Location target = manager.enemies[j].getLocation();
