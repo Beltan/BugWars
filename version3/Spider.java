@@ -22,8 +22,27 @@ public class Spider {
         Location myQueen = manager.closestAllyQueen();
         Location targetQueen = manager.closestEnemyQueen();
         int distance = manager.myLocation.distanceSquared(myQueen);
+        int enemies = 0;
+        int allies = 1;
 
-        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
+        for (UnitInfo ally : manager.units) {
+            UnitType allyType = ally.getType();
+            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                allies++;
+            }
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
+                enemies++;
+            }
+        }
+
+        if (manager.getPassive() == 1 && manager.resources < 1000 && (manager.round < 1000 && manager.getEnemySpotted() == 0)) {
+            if (manager.myLocation.distanceSquared(myQueen) > 36) {
+                manager.path.moveTo(myQueen);
+            }
+        } else if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 6)) {
             manager.path.moveTo(myQueen);
         } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();
@@ -101,27 +120,25 @@ public class Spider {
             if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
                 int value = 0;
                 for (int j = 0; j < manager.enemies.length; j++) {
-                    if (manager.enemies[j].getType() == UnitType.QUEEN) {
+                    if (manager.enemies[j].getType() == UnitType.QUEEN && manager.enemies.length != 1) {
                         continue;
                     }
                     Location target = manager.enemies[j].getLocation();
-                    if (!manager.isObstructed(target)) {
-                        int distance = newLoc.distanceSquared(target);
-                        if (enemies > allies) {
-                            value += distance;
+                    int distance = newLoc.distanceSquared(target);
+                    if (!manager.isObstructed(target) && allies >= enemies) {
+                        if (distance == 17) {
+                            value += 100;
+                        } else if (distance > 17) {
+                            value += 10;
+                        } else if (distance < 10) {
+                            value -= 1000;
+                        } else if (distance < 14) {
+                            value -= 75;
                         } else {
-                            if (distance == 17) {
-                                value += 100;
-                            } else if (distance > 17) {
-                                value += 10;
-                            } else if (distance < 10) {
-                                value -= 1000;
-                            } else if (distance < 14) {
-                                value -= 75;
-                            } else {
-                                value += distance;
-                            }
+                            value += distance;
                         }
+                    } else {
+                        value += distance;
                     }
                 }
 

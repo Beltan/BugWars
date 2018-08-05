@@ -78,7 +78,11 @@ public class Bee {
             }
         }
 
-        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && allies < enemies) {
+        if (manager.getPassive() == 1 && manager.resources < 1000 && (manager.round < 1000 && manager.getEnemySpotted() == 0)) {
+            if (manager.myLocation.distanceSquared(myQueen) > 36) {
+                manager.path.moveTo(myQueen);
+            }
+        } else if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 6)) {
             manager.path.moveTo(myQueen);
         } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();

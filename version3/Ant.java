@@ -35,9 +35,14 @@ public class Ant {
                     bestFood = food;
                 }
             }
-
-            if (!manager.myLocation.isEqual(bestFood.location)) {
-                manager.path.moveTo(bestFood.location);
+            if (bestFood.food > 3) {
+                if (!manager.myLocation.isEqual(bestFood.location)) {
+                    manager.path.moveTo(bestFood.location);
+                }
+            } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+                manager.path.moveTo(foodLoc);
+            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+                manager.path.moveTo(foodLoc);
             }
         } else if (foodLocNotObs.x != 0 ||foodLocNotObs.y != 0){
             manager.path.moveTo(foodLoc);

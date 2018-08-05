@@ -24,14 +24,16 @@ public class Queen {
         Location foodLoc = manager.getIdleFoodLocation();
         if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();
-        } else if (manager.bestFood != null) {
+        } else if (manager.bestFood != null && manager.myLocation != manager.bestFood && manager.myLocation.distanceSquared(manager.bestFood) > 2) {
             manager.path.moveToQueen(manager.bestFood);
-        } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+        } else if ((foodLocNotObs.x != 0 || foodLocNotObs.y != 0) && manager.myLocation != foodLocNotObs && manager.myLocation.distanceSquared(foodLocNotObs) > 2) {
             manager.path.moveToQueen(foodLocNotObs);
-        } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+        } else if ((foodLoc.x != 0 || foodLoc.y != 0) && manager.myLocation != foodLoc && manager.myLocation.distanceSquared(foodLoc) > 2) {
             manager.path.moveToQueen(foodLoc);
         } else {
-            manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
+            if (manager.getPassive() != 1 || manager.round > 1000 || manager.myLocation.distanceSquared(uc.getEnemyQueensLocation()[0]) > 200) {
+                manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
+            }
         }
         manager.myLocation = uc.getLocation();
         manager.enemies = uc.senseUnits(manager.opponent);
@@ -145,8 +147,6 @@ public class Queen {
                         if ((enemies <= allies) && ((health > 200 && enemies < 5) || (health > 150 && enemies < 4) || (health > 100 && enemies < 3) || (health > 50 && enemies < 2))) {
                             if (distance < 3) {
                                 value -= 100;
-                            } else {
-                                manager.path.moveToQueen(target);
                             }
                         } else {
                             value += distance;
@@ -163,6 +163,15 @@ public class Queen {
 
         if (bestValue != -100000 && uc.canMove(bestDirection)) {
             uc.move(bestDirection);
+        }
+
+        for (int i = 0; i < uc.getMyQueensLocation().length; i++) {
+            if (uc.read(manager.INITIAL_QUEEN_INFO + i * 4) == 2) {
+                continue;
+            }
+            uc.write(manager.INITIAL_QUEEN_INFO + 2 + i * 4, allies);
+            uc.write(manager.INITIAL_QUEEN_INFO + 3 + i * 4, enemies);
+            uc.write(manager.INITIAL_QUEEN_INFO + i * 4, 2);
         }
     }
 
