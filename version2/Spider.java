@@ -21,33 +21,16 @@ public class Spider {
     private void tryMove() {
         Location myQueen = manager.closestAllyQueen();
         Location targetQueen = manager.closestEnemyQueen();
-        int soldiers = manager.getTotalTroops();
         int distance = manager.myLocation.distanceSquared(myQueen);
-        if (manager.resources < 1000 && soldiers < 8) {
-            if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
-                manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                evalLocation();
-            } else if (distance < 6){
-                evalLocation();
-            } else {
-                manager.path.moveTo(myQueen);
-            }
-        } else if (manager.resources < 1000 && soldiers < 20) {
-            if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
-                manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                evalLocation();
-            } else {
-                manager.path.moveTo(targetQueen);
-            }
+
+        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
+            manager.path.moveTo(myQueen);
+        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
+            evalLocation();
         } else {
-            if (manager.enemies.length == 0 || manager.allObstructed()) {
-                manager.path.moveTo(targetQueen);
-            } else {
-                evalLocation();
-            }
+            manager.path.moveTo(targetQueen);
         }
+
         manager.myLocation = uc.getLocation();
         manager.enemies = uc.senseUnits(manager.opponent);
     }

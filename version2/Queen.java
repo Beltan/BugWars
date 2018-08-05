@@ -20,21 +20,14 @@ public class Queen {
     }
 
     private void tryMove() {
+        Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
         Location foodLoc = manager.getIdleFoodLocation();
-        if (manager.isExtreme(manager.myLocation)) {
-            if (manager.myLocation.isEqual(foodLoc)) {
-                manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
-            } else if (manager.bestFood != null) {
-                manager.path.moveToQueen(manager.bestFood);
-            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
-                manager.path.moveToQueen(foodLoc);
-            } else {
-                evalLocation();
-            }
-        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
+        if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();
         } else if (manager.bestFood != null) {
             manager.path.moveToQueen(manager.bestFood);
+        } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+            manager.path.moveToQueen(foodLocNotObs);
         } else if (foodLoc.x != 0 || foodLoc.y != 0) {
             manager.path.moveToQueen(foodLoc);
         } else {
@@ -45,11 +38,14 @@ public class Queen {
     }
 
     private void trySpawn() {
+        Location idleFoodNotObs = manager.getIdleFoodLocationNotObs();
         Location idleFood = manager.getIdleFoodLocation();
         Direction target;
 
         if (manager.bestFood != null) {
             target = manager.bestFood.directionTo(manager.myLocation);
+        } else if (idleFoodNotObs.x != 0 && idleFoodNotObs.y != 0) {
+            target = idleFoodNotObs.directionTo(manager.myLocation);
         } else if (idleFood.x != 0 && idleFood.y != 0) {
             target = idleFood.directionTo(manager.myLocation);
         } else {
@@ -141,14 +137,11 @@ public class Queen {
             Location newLoc = manager.myLocation.add(manager.dirs[i]);
             if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
                 int value = 0;
-                if (manager.isExtreme(newLoc)) {
-                    value -= 100;
-                }
                 for (int j = 0; j < manager.enemies.length; j++) {
                     Location target = manager.enemies[j].getLocation();
                     if (!manager.isObstructed(target)) {
                         int distance = newLoc.distanceSquared(target);
-                        if (enemies <= allies && enemies < 10) {
+                        if (enemies <= allies && enemies < 5) {
                             if (distance < 3) {
                                 value -= 100;
                             } else {

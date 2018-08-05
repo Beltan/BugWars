@@ -138,26 +138,55 @@ public class MemoryManager {
         int xLoc = idleFoodLocation.x;
         int yLoc = idleFoodLocation.y;
 
-        if (myLocation.isEqual(idleFoodLocation) || (uc.canSenseLocation(idleFoodLocation) && uc.senseUnit(idleFoodLocation) != null)) {
-            idleFoodHealth = 0;
-        } else {
-            for (FoodInfo foodUnit : food) {
-                if (foodUnit.food == foodUnit.initialFood && idleFoodHealth < foodUnit.food) {
-                    idleFoodHealth = foodUnit.food;
-                    xLoc = foodUnit.location.x;
-                    yLoc = foodUnit.location.y;
+        if (myType == UnitType.QUEEN || myType == UnitType.ANT) {
+            if (myLocation.isEqual(idleFoodLocation) || (uc.canSenseLocation(idleFoodLocation) && uc.senseUnit(idleFoodLocation) != null)) {
+                idleFoodHealth = 0;
+            } else {
+                for (FoodInfo foodUnit : food) {
+                    if (foodUnit.food == foodUnit.initialFood && idleFoodHealth < foodUnit.food) {
+                        idleFoodHealth = foodUnit.food;
+                        xLoc = foodUnit.location.x;
+                        yLoc = foodUnit.location.y;
+                    }
                 }
             }
-        }
 
-        if (idleFoodHealth == 0) {
-            uc.write(IDLE_FOOD_HEALTH, 0);
-            uc.write(XIDLE_FOOD, 0);
-            uc.write(YIDLE_FOOD, 0);
-        } else if (idleFoodHealth != getIdleFoodHealth()) {
-            uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
-            uc.write(XIDLE_FOOD, xLoc);
-            uc.write(YIDLE_FOOD, yLoc);
+            if (idleFoodHealth == 0) {
+                uc.write(IDLE_FOOD_HEALTH, 0);
+                uc.write(XIDLE_FOOD, 0);
+                uc.write(YIDLE_FOOD, 0);
+            } else if (idleFoodHealth != getIdleFoodHealth()) {
+                uc.write(IDLE_FOOD_HEALTH, idleFoodHealth);
+                uc.write(XIDLE_FOOD, xLoc);
+                uc.write(YIDLE_FOOD, yLoc);
+            }
+
+            int idleFoodHealthNotObs = getIdleFoodHealthNotObs();
+            Location idleFoodLocationNotObs = getIdleFoodLocationNotObs();
+            int xLocNotObs = idleFoodLocationNotObs.x;
+            int yLocNotObs = idleFoodLocationNotObs.y;
+
+            if (myLocation.isEqual(idleFoodLocationNotObs) || (uc.canSenseLocation(idleFoodLocationNotObs) && uc.senseUnit(idleFoodLocationNotObs) != null)) {
+                idleFoodHealthNotObs = 0;
+            } else {
+                for (FoodInfo foodUnit : food) {
+                    if (!isObstructed(foodUnit.location) && foodUnit.food == foodUnit.initialFood && idleFoodHealthNotObs < foodUnit.food) {
+                        idleFoodHealthNotObs = foodUnit.food;
+                        xLocNotObs = foodUnit.location.x;
+                        yLocNotObs = foodUnit.location.y;
+                    }
+                }
+            }
+
+            if (idleFoodHealthNotObs == 0) {
+                uc.write(IDLE_FOOD_HEALTH_OBS, 0);
+                uc.write(XIDLE_FOOD_OBS, 0);
+                uc.write(YIDLE_FOOD_OBS, 0);
+            } else if (idleFoodHealthNotObs != getIdleFoodHealthNotObs()) {
+                uc.write(IDLE_FOOD_HEALTH_OBS, idleFoodHealthNotObs);
+                uc.write(XIDLE_FOOD_OBS, xLocNotObs);
+                uc.write(YIDLE_FOOD_OBS, yLocNotObs);
+            }
         }
 
         // Enemy spotted check
@@ -435,16 +464,28 @@ public class MemoryManager {
         int maxFood = 0;
         int foodCount = 0;
 
-        for (FoodInfo foodUnit : food) {
-            if (!myLocation.isEqual(foodUnit.location)) {
-                if (!isObstructed(foodUnit.location)) {
-                    foodHealth += foodUnit.food;
-                    maxFood += foodUnit.initialFood;
-                    foodCount++;
-                    if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food) {
-                        bestFood = foodUnit.location;
-                        bestFoodHealth = foodUnit.food;
+        if (food.length < 70) {
+            for (FoodInfo foodUnit : food) {
+                if (!myLocation.isEqual(foodUnit.location)) {
+                    if (!isObstructed(foodUnit.location)) {
+                        foodHealth += foodUnit.food;
+                        maxFood += foodUnit.initialFood;
+                        foodCount++;
+                        if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food) {
+                            bestFood = foodUnit.location;
+                            bestFoodHealth = foodUnit.food;
+                        }
                     }
+                }
+            }
+        } else {
+            for (FoodInfo foodUnit : food) {
+                foodHealth += foodUnit.food;
+                maxFood += foodUnit.initialFood;
+                foodCount++;
+                if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food && !myLocation.isEqual(foodUnit.location)) {
+                    bestFood = foodUnit.location;
+                    bestFoodHealth = foodUnit.food;
                 }
             }
         }
@@ -470,11 +511,9 @@ public class MemoryManager {
                 (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount)));
     }
 
-    // Beetle spawn conditions
-
-
+    // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return ((2 * getSpiders() + 1 >= getBeetles() && 2 * getBees() + 1 >= getBeetles()) ||
+        return ((2 * getSpiders() + 1 >= getBeetles() && 4 * getBees() + 1 >= getBeetles()) ||
                 (enemies.length != 0 && !allObstructed()) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
@@ -485,7 +524,7 @@ public class MemoryManager {
     }
 
     public boolean canSpawnBee() {
-        return ((2 * getBees() + 1 < getBeetles()) ||
+        return ((4 * getBees() + 1 < getBeetles()) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
@@ -556,7 +595,7 @@ public class MemoryManager {
         }
         uc.write(XQUEEN_ALLOWED, allowedToSpawn.x);
         uc.write(YQUEEN_ALLOWED, allowedToSpawn.y);
-        uc.write(SPAWN_SOLDIERS_ROUND, (int) Math.sqrt(smallestDistance) + 10);
+        uc.write(SPAWN_SOLDIERS_ROUND, (int) Math.sqrt(smallestDistance) + 5);
     }
 
     public Location closestEnemyQueen() {
@@ -696,6 +735,14 @@ public class MemoryManager {
 
     public int getIdleFoodHealth() {
         return uc.read(IDLE_FOOD_HEALTH);
+    }
+
+    public Location getIdleFoodLocationNotObs() {
+        return new Location(uc.read(XIDLE_FOOD_OBS), uc.read(YIDLE_FOOD_OBS));
+    }
+
+    public int getIdleFoodHealthNotObs() {
+        return uc.read(IDLE_FOOD_HEALTH_OBS);
     }
 
     public int getEnemySpotted() {

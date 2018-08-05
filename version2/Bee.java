@@ -61,33 +61,16 @@ public class Bee {
     private void tryMove() {
         Location myQueen = manager.closestAllyQueen();
         Location targetQueen = manager.closestEnemyQueen();
-        int soldiers = manager.getTotalTroops();
         int distance = manager.myLocation.distanceSquared(myQueen);
-        if (manager.resources < 1000 && soldiers < 8) {
-            if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
-                manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                evalLocation();
-            } else if (distance < 6){
-                evalLocation();
-            } else {
-                manager.path.moveTo(myQueen);
-            }
-        } else if (manager.resources < 1000 && soldiers < 20) {
-            if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
-                manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                evalLocation();
-            } else {
-                manager.path.moveTo(targetQueen);
-            }
+
+        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
+            manager.path.moveTo(myQueen);
+        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
+            evalLocation();
         } else {
-            if (manager.enemies.length == 0 || manager.allObstructed()) {
-                manager.path.moveTo(targetQueen);
-            } else {
-                evalLocation();
-            }
+            manager.path.moveTo(targetQueen);
         }
+
         manager.myLocation = uc.getLocation();
         manager.enemies = uc.senseUnits(manager.opponent);
     }
@@ -99,13 +82,16 @@ public class Bee {
         int bestValue = -100000;
 
         int enemies = 0;
-        int allies = 0;
-        if (manager.units != null) {
-            allies = manager.units.length;
+        int allies = 1;
+        for (UnitInfo ally : manager.units) {
+            UnitType allyType = ally.getType();
+            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                allies++;
+            }
         }
         for (UnitInfo enemy : manager.enemies) {
             UnitType enemyType = enemy.getType();
-            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT) {
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
                 enemies++;
             }
         }
@@ -117,7 +103,7 @@ public class Bee {
                 for (int j = 0; j < manager.enemies.length; j++) {
                     Location target = manager.enemies[j].getLocation();
                     int distance = newLoc.distanceSquared(target);
-                    if (!manager.isObstructed(target) && allies >= enemies) {
+                    if (!manager.isObstructed(target) && allies > enemies * 1.2) {
                         if (distance < 3) {
                             value -= 100;
                         } else if (distance < 6) {
@@ -126,7 +112,7 @@ public class Bee {
                             value -= distance;
                         }
                     } else {
-                        value += distance;
+                        value -= 100 / (distance + 1);
                     }
                 }
 
