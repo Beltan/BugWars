@@ -141,7 +141,8 @@ public class Queen {
                     Location target = manager.enemies[j].getLocation();
                     if (!manager.isObstructed(target)) {
                         int distance = newLoc.distanceSquared(target);
-                        if (enemies <= allies && enemies < 5) {
+                        int health = uc.getInfo().getHealth();
+                        if ((enemies <= allies) && ((health > 200 && enemies < 5) || (health > 150 && enemies < 4) || (health > 100 && enemies < 3) || (health > 50 && enemies < 2))) {
                             if (distance < 3) {
                                 value -= 100;
                             } else {

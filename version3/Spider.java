@@ -80,6 +80,21 @@ public class Spider {
 
         Direction bestDirection = manager.dirs[8];
         int bestValue = -100000;
+        int enemies = 0;
+        int allies = 1;
+
+        for (UnitInfo ally : manager.units) {
+            UnitType allyType = ally.getType();
+            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                allies++;
+            }
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
+                enemies++;
+            }
+        }
 
         for (int i = 0; i < manager.dirs.length; i++) {
             Location newLoc = manager.myLocation.add(manager.dirs[i]);
@@ -92,16 +107,20 @@ public class Spider {
                     Location target = manager.enemies[j].getLocation();
                     if (!manager.isObstructed(target)) {
                         int distance = newLoc.distanceSquared(target);
-                        if (distance == 17) {
-                            value += 100;
-                        } else if (distance > 17) {
-                            value += 10;
-                        } else if (distance < 10) {
-                            value -= 1000;
-                        } else if (distance < 14) {
-                            value -= 75;
-                        } else {
+                        if (enemies > allies) {
                             value += distance;
+                        } else {
+                            if (distance == 17) {
+                                value += 100;
+                            } else if (distance > 17) {
+                                value += 10;
+                            } else if (distance < 10) {
+                                value -= 1000;
+                            } else if (distance < 14) {
+                                value -= 75;
+                            } else {
+                                value += distance;
+                            }
                         }
                     }
                 }

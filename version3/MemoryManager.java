@@ -514,18 +514,18 @@ public class MemoryManager {
 
     // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return ((((2 * getSpiders() + 1 >= getBeetles() && 4 * getBees() + 1 >= getBeetles()) ||
+        return (((2 * getSpiders() + 1 >= getBeetles() && 3 * getBees() + 1 >= getBeetles()) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11)) ||
-                (enemies.length != 0 && !allObstructed())) && enemies.length != 0);
+                (enemies.length != 0 && !allObstructed()));
     }
 
     public boolean canSpawnSpider() {
-        return ((2 * getSpiders() + 1 < getBeetles()) || enemies.length == 0 ||
+        return ((2 * getSpiders() + 1 < getBeetles()) || ((enemies.length == 0 || allObstructed()) && (getBeetles() > getSpiders())) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
     public boolean canSpawnBee() {
-        return ((4 * getBees() + 1 < getBeetles()) ||
+        return ((3 * getBees() + 1 < getBeetles()) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
@@ -596,7 +596,11 @@ public class MemoryManager {
         }
         uc.write(XQUEEN_ALLOWED, allowedToSpawn.x);
         uc.write(YQUEEN_ALLOWED, allowedToSpawn.y);
-        uc.write(SPAWN_SOLDIERS_ROUND, (int) Math.sqrt(smallestDistance) + 15);
+        int minRound = getSpawnSoldiersRound();
+        int currentRound = (int) Math.sqrt(smallestDistance) + 15;
+        if (currentRound < minRound || minRound == 0) {
+            uc.write(SPAWN_SOLDIERS_ROUND, currentRound);
+        }
     }
 
     public Location closestEnemyQueen() {
