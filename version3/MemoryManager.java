@@ -543,7 +543,7 @@ public class MemoryManager {
         }
 
         return (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
-                (getTotalTroops() > getAnts() + 2 && (enemies.length == 0 || allObstructed()))) &&
+                ((getTotalTroops() > getAnts() || getTotalTroops() > 15) && (enemies.length == 0 || allObstructed()))) &&
                 (myLocation.distanceSquared(closestEnemyQueen()) > 200 || getTotalTroops() > 4) &&
                 (foodCount != 1 || maxFood == foodHealth) &&
                 ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||

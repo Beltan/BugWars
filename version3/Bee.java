@@ -128,10 +128,18 @@ public class Bee {
                     int distance = newLoc.distanceSquared(target);
                     if (!manager.isObstructed(target) && allies >= enemies) {
                         if (distance < 3) {
-                            value -= 200;
+                            if (manager.enemies[j].getType() != UnitType.ANT) {
+                                value -= 200;
+                            } else {
+                                value += 50;
+                            }
                         } else if (distance < 5) {
-                            value -= 100;
-                        } else if (distance == 5) {
+                            if (manager.enemies[j].getType() != UnitType.ANT) {
+                                value -= 100;
+                            } else {
+                                value += 25;
+                            }
+                        } else if (distance == 5 && manager.enemies[j].getType() != UnitType.ANT) {
                             if (counter == 0) {
                                 value += 100;
                                 counter++;

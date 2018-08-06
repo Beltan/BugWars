@@ -35,7 +35,8 @@ public class Ant {
                     bestFood = food;
                 }
             }
-            if (bestFood.food > 3) {
+
+            if (bestFood.food > 1) {
                 if (!manager.myLocation.isEqual(bestFood.location)) {
                     manager.path.moveTo(bestFood.location);
                 }
