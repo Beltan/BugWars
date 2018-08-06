@@ -66,6 +66,8 @@ public class MemoryManager {
     public int YQUEEN_ALLOWED_ANT = 38;
     public int PASSIVE = 39;
     public int PASSIVE_COUNTER = 40;
+    public int QUEEN_SEES_ENEMY = 41;
+    public int QUEEN_SEES_ENEMY_CURRENT = 42;
 
     // 100 to 129 are cocoon IDs
     public int INITIAL_COCOON_LIST = 100;
@@ -202,7 +204,7 @@ public class MemoryManager {
         }
 
         // Enemy spotted check
-        if (enemies.length != 0) {
+        if (enemies.length != 0 && !allObstructed()) {
             uc.write(ENEMY_SPOTTED, 1);
         }
 
@@ -213,6 +215,9 @@ public class MemoryManager {
 
         // Update objective
         if (myType == UnitType.QUEEN) {
+            if (enemies.length != 0 && !allObstructed()) {
+                uc.write(QUEEN_SEES_ENEMY_CURRENT, 1);
+            }
             updateObjective();
         }
     }
@@ -244,6 +249,10 @@ public class MemoryManager {
         // Updates enemy seen last round
         uc.write(ENEMY_SEEN_LAST_ROUND, 0);
 
+        // Updates enemy seen by Queen
+        uc.write(QUEEN_SEES_ENEMY, uc.read(QUEEN_SEES_ENEMY_CURRENT));
+        uc.write(QUEEN_SEES_ENEMY_CURRENT, 0);
+
         // Resets queen info
         Location allyQueens[] = uc.getMyQueensLocation();
         for (int i = 0; i < allyQueens.length; i++) {
@@ -267,24 +276,26 @@ public class MemoryManager {
             uc.write(PASSIVE, 1);
         }
 
-        if (getPassive() == 0) {
-            boolean passive = true;
-            for (int i = 0; i < enemyQueens.length; i++) {
-                if (round == 0) {
-                    uc.write(PREVIOUS_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
-                    uc.write(PREVIOUS_ENEMY_QUEENS + 1 + i * 2, enemyQueens[i].y);
-                }
-                if (!getPreviousEnemyQueenLocation(i).isEqual(enemyQueens[i])) {
-                    uc.write(PASSIVE, 0);
-                    passive = false;
-                    break;
-                }
+        boolean passive = true;
+        for (int i = 0; i < enemyQueens.length; i++) {
+            if (round == 0) {
+                uc.write(PREVIOUS_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
+                uc.write(PREVIOUS_ENEMY_QUEENS + 1 + i * 2, enemyQueens[i].y);
+                uc.write(PASSIVE_COUNTER, 0);
             }
-            if (passive) {
-                uc.write(PASSIVE_COUNTER, uc.read(PASSIVE_COUNTER) + 1);
-                if (getPassiveCounter() > 30) {
-                    uc.write(PASSIVE, 1);
-                }
+            if (!getPreviousEnemyQueenLocation(i).isEqual(enemyQueens[i])) {
+                uc.write(PREVIOUS_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
+                uc.write(PREVIOUS_ENEMY_QUEENS + 1 + i * 2, enemyQueens[i].y);
+                uc.write(PASSIVE, 0);
+                passive = false;
+                uc.write(PASSIVE_COUNTER, 0);
+                break;
+            }
+        }
+        if (passive) {
+            uc.write(PASSIVE_COUNTER, uc.read(PASSIVE_COUNTER) + 1);
+            if (getPassiveCounter() > 15) {
+                uc.write(PASSIVE, 1);
             }
         }
     }
@@ -567,9 +578,9 @@ public class MemoryManager {
         }
 
         return (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
-                ((getTotalTroops() > getAnts() || getTotalTroops() > 15) && (enemies.length == 0 || allObstructed()))) &&
-                (myLocation.distanceSquared(closestEnemyQueen()) > 200 || getTotalTroops() > 4) &&
-                (foodCount != 1 || maxFood == foodHealth) &&
+                ((getTotalTroops() > 1.5 * getAnts() || getTotalTroops() > 40) && (enemies.length == 0 || allObstructed()))) &&
+                (myLocation.distanceSquared(closestEnemyQueen()) > 200 || getTotalTroops() > 5) &&
+                (foodCount != 1 || maxFood == foodHealth) && getQueenSeesEnemy() == 0 &&
                 ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.3 > maxFood && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.15 > maxFood && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
@@ -879,5 +890,9 @@ public class MemoryManager {
 
     public int getPassiveCounter() {
         return uc.read(PASSIVE_COUNTER);
+    }
+
+    public int getQueenSeesEnemy() {
+        return uc.read(QUEEN_SEES_ENEMY);
     }
 }

@@ -47,7 +47,11 @@ public class Beetle {
         } else if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 6)) {
             manager.path.moveTo(myQueen);
         } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            evalLocation();
+            if (uc.canAttack()) {
+                evalLocationAttack();
+            } else {
+                evalLocation();
+            }
         } else {
             manager.path.moveTo(targetQueen);
         }
@@ -144,6 +148,63 @@ public class Beetle {
                                 counter++;
                             } else {
                                 value -= 100;
+                            }
+                        } else {
+                            value -= distance;
+                        }
+                    } else {
+                        value += distance;
+                    }
+                }
+
+                if (value >= bestValue) {
+                    bestDirection = manager.dirs[i];
+                    bestValue = value;
+                }
+            }
+        }
+
+        if (bestValue != -100000 && uc.canMove(bestDirection)) {
+            uc.move(bestDirection);
+        }
+    }
+
+    private void evalLocationAttack() {
+        Direction bestDirection = manager.dirs[8];
+        int bestValue = -100000;
+
+        int enemies = 0;
+        int allies = 1;
+        for (UnitInfo ally : manager.units) {
+            UnitType allyType = ally.getType();
+            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                allies++;
+            }
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
+                enemies++;
+            }
+        }
+
+        for (int i = 0; i < manager.dirs.length; i++) {
+            Location newLoc = manager.myLocation.add(manager.dirs[i]);
+            if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
+                int value = 0;
+                int counter = 0;
+                for (int j = 0; j < manager.enemies.length; j++) {
+                    if (manager.enemies[j].getType() == UnitType.QUEEN && manager.enemies.length != 1) {
+                        continue;
+                    }
+                    Location target = manager.enemies[j].getLocation();
+                    int distance = newLoc.distanceSquared(target);
+                    if (!manager.isObstructed(target) && allies >= enemies) {
+                        if (distance < 6) {
+                            if (manager.enemies[j].getType() != UnitType.ANT) {
+                                value += distance;
+                            } else {
+                                value += 1;
                             }
                         } else {
                             value -= distance;
