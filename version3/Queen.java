@@ -20,6 +20,8 @@ public class Queen {
     }
 
     private void tryMove() {
+        if (!uc.canMove()) return;
+
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
         Location foodLoc = manager.getIdleFoodLocation();
         if (manager.enemies.length != 0 && !manager.allObstructed()) {
@@ -35,8 +37,7 @@ public class Queen {
                 manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
             }
         }
-        manager.myLocation = uc.getLocation();
-        manager.enemies = uc.senseUnits(manager.opponent);
+        manager.postMoveUpdate();
     }
 
     private void trySpawn() {
@@ -119,8 +120,6 @@ public class Queen {
     }
 
     private void evalLocation() {
-        if (!uc.canMove()) return;
-
         Direction bestDirection = manager.dirs[8];
         int bestValue = -100000;
         int enemies = 0;
@@ -128,6 +127,7 @@ public class Queen {
         if (manager.units != null) {
             allies = manager.units.length;
         }
+
         for (UnitInfo enemy : manager.enemies) {
             UnitType enemyType = enemy.getType();
             if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT) {

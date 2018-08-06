@@ -19,6 +19,8 @@ public class Beetle {
     }
 
     private void tryMove() {
+        if (!uc.canMove()) return;
+
         Location myQueen = manager.closestAllyQueen();
         Location targetQueen = manager.closestEnemyQueen();
         int distance = manager.myLocation.distanceSquared(myQueen);
@@ -39,7 +41,7 @@ public class Beetle {
         }
 
         if (manager.getPassive() == 1 && manager.resources < 1000 && (manager.round < 1000 && manager.getEnemySpotted() == 0)) {
-            if (manager.myLocation.distanceSquared(myQueen) > 36) {
+            if (manager.myLocation.distanceSquared(myQueen) > 100) {
                 manager.path.moveTo(myQueen);
             }
         } else if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 6)) {
@@ -50,8 +52,7 @@ public class Beetle {
             manager.path.moveTo(targetQueen);
         }
 
-        manager.myLocation = uc.getLocation();
-        manager.enemies = uc.senseUnits(manager.opponent);
+        manager.postMoveUpdate();
     }
 
     private void tryAttack() {
@@ -75,7 +76,7 @@ public class Beetle {
             if (smallestHealth != 1000000) {
                 uc.attack(lowestEnemy);
             }
-        } else if (manager.rocks.length != 0) {
+        } else {
             int smallestRock = 10000000;
             int durability;
             RockInfo weakerRock = manager.rocks[0];
@@ -95,8 +96,6 @@ public class Beetle {
     }
 
     private void evalLocation() {
-        if (!uc.canMove()) return;
-
         Direction bestDirection = manager.dirs[8];
         int bestValue = -100000;
 

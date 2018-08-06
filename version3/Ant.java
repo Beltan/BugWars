@@ -21,30 +21,23 @@ public class Ant {
     }
 
     private void tryMove() {
-        int maxAmount = 0;
+        if (!uc.canMove()) return;
         Location foodLoc = manager.getIdleFoodLocation();
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
+        FoodInfo bestFood = null;
+        int maxAmount = 0;
+
+        for (FoodInfo food : manager.food) {
+            if (food.food > maxAmount && !manager.isObstructed(food.location)) {
+                maxAmount = food.food;
+                bestFood = food;
+            }
+        }
+
         if (manager.enemies.length != 0 && !manager.allObstructed()) {
             evalLocation();
-        } else if (manager.food.length != 0) {
-            FoodInfo bestFood = manager.food[0];
-
-            for (FoodInfo food : manager.food) {
-                if (food.food > maxAmount && !manager.isObstructed(food.location)) {
-                    maxAmount = food.food;
-                    bestFood = food;
-                }
-            }
-
-            if (bestFood.food > 1) {
-                if (!manager.myLocation.isEqual(bestFood.location)) {
-                    manager.path.moveTo(bestFood.location);
-                }
-            } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
-                manager.path.moveTo(foodLoc);
-            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
-                manager.path.moveTo(foodLoc);
-            }
+        } else if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
+            manager.path.moveTo(bestFood.location);
         } else if (foodLocNotObs.x != 0 ||foodLocNotObs.y != 0){
             manager.path.moveTo(foodLoc);
         } else if (foodLoc.x != 0 ||foodLoc.y != 0){
@@ -58,14 +51,11 @@ public class Ant {
                 }
             }
         }
-        manager.myLocation = uc.getLocation();
-        manager.enemies = uc.senseUnits(manager.opponent);
+        manager.postMoveUpdate();
     }
 
     private void tryHarvest() {
-        if (!uc.canMine()) {
-            return;
-        }
+        if (!uc.canMine()) return;
 
         if (manager.food.length != 0) {
             int maxAmount = 0;
@@ -127,8 +117,6 @@ public class Ant {
     }
 
     private void evalLocation() {
-        if (!uc.canMove()) return;
-
         Direction bestDirection = manager.dirs[8];
         int bestValue = -100000;
 

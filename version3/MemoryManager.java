@@ -65,6 +65,7 @@ public class MemoryManager {
     public int XQUEEN_ALLOWED_ANT = 37;
     public int YQUEEN_ALLOWED_ANT = 38;
     public int PASSIVE = 39;
+    public int PASSIVE_COUNTER = 40;
 
     // 100 to 129 are cocoon IDs
     public int INITIAL_COCOON_LIST = 100;
@@ -75,6 +76,9 @@ public class MemoryManager {
 
     // 150 to 159 are enemy Queen positions
     public int INITIAL_ENEMY_QUEENS = 150;
+
+    // 160 to 169 are enemy Queen positions
+    public int PREVIOUS_ENEMY_QUEENS = 160;
 
     public MemoryManager(UnitController uc) {
         this.uc = uc;
@@ -258,10 +262,30 @@ public class MemoryManager {
             }
             if (!getEnemyQueenLocation(i).isEqual(enemyQueens[i])) {
                 uc.write(PASSIVE, 0);
-                continue;
+                break;
             }
             uc.write(PASSIVE, 1);
-            break;
+        }
+
+        if (getPassive() == 0) {
+            boolean passive = true;
+            for (int i = 0; i < enemyQueens.length; i++) {
+                if (round == 0) {
+                    uc.write(PREVIOUS_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
+                    uc.write(PREVIOUS_ENEMY_QUEENS + 1 + i * 2, enemyQueens[i].y);
+                }
+                if (!getPreviousEnemyQueenLocation(i).isEqual(enemyQueens[i])) {
+                    uc.write(PASSIVE, 0);
+                    passive = false;
+                    break;
+                }
+            }
+            if (passive) {
+                uc.write(PASSIVE_COUNTER, uc.read(PASSIVE_COUNTER) + 1);
+                if (getPassiveCounter() > 30) {
+                    uc.write(PASSIVE, 1);
+                }
+            }
         }
     }
 
@@ -746,6 +770,12 @@ public class MemoryManager {
         return false;
     }
 
+    public void postMoveUpdate() {
+        myLocation = uc.getLocation();
+        enemies = uc.senseUnits(opponent);
+        rocks = uc.senseObstacles();
+    }
+
     // Getters
     public int getFinalMapSize() {
         return uc.read(FINAL_MAP_SIZE);
@@ -839,7 +869,15 @@ public class MemoryManager {
         return new Location(uc.read(INITIAL_ENEMY_QUEENS + index * 2), uc.read(INITIAL_ENEMY_QUEENS + 1 + index * 2));
     }
 
+    public Location getPreviousEnemyQueenLocation(int index) {
+        return new Location(uc.read(PREVIOUS_ENEMY_QUEENS + index * 2), uc.read(PREVIOUS_ENEMY_QUEENS + 1 + index * 2));
+    }
+
     public int getPassive() {
         return uc.read(PASSIVE);
+    }
+
+    public int getPassiveCounter() {
+        return uc.read(PASSIVE_COUNTER);
     }
 }
