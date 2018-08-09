@@ -169,8 +169,8 @@ public class Pathfinder {
         }
     }
 
-    public void evalLocation(int allies, int enemies) {
-        if (!uc.canMove()) return;
+    public boolean evalLocation(int allies, int enemies) {
+        if (!uc.canMove()) return false;
 
         MicroInfo[] microInfo = new MicroInfo[9];
         for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.myLocation.add(manager.dirs[i]), allies, enemies);
@@ -188,11 +188,13 @@ public class Pathfinder {
             if (bestIndex < 0 || !microInfo[bestIndex].isBetter(microInfo[i])) bestIndex = i;
         }
 
-        if (bestIndex != -1) {
-            if (manager.enemies.length > 0) {
+        if (bestIndex != -1 && !microInfo[bestIndex].obstructed) {
+            if (manager.enemies.length > 0 && bestIndex != 8) {
                 uc.move(manager.dirs[bestIndex]);
             }
+            return true;
         }
+        return false;
     }
 
     class MicroInfo {
@@ -207,6 +209,7 @@ public class Pathfinder {
         int allies;
         int enemies;
         boolean moveAndKill;
+        boolean obstructed;
         Location loc;
 
         public MicroInfo(Location loc, int allies, int enemies) {
@@ -222,11 +225,16 @@ public class Pathfinder {
             minDistToEnemy = 1000000;
             minDistToSoldier = 1000000;
             moveAndKill = false;
+            obstructed = true;
         }
 
         void update(UnitInfo unit) {
             UnitType type = unit.getType();
-            if (!uc.isObstructed(loc, unit.getLocation())) {
+            boolean currentObstructed = uc.isObstructed(loc, unit.getLocation());
+            if (obstructed) {
+                obstructed = currentObstructed;
+            }
+            if (!currentObstructed) {
                 int distance = unit.getLocation().distanceSquared(loc);
                 if (distance <= type.getAttackRangeSquared() && distance >= type.getMinAttackRangeSquared()) {
                     if (type != UnitType.ANT) numEnemies++;
@@ -252,8 +260,8 @@ public class Pathfinder {
         boolean isBetter(MicroInfo micro) {
             if (moveAndKill && !micro.moveAndKill) return true;
             if (!moveAndKill && micro.moveAndKill) return false;
-            if (manager.myType == UnitType.ANT) return minDistToSoldier > micro.minDistToSoldier;
-            if (manager.myType == UnitType.QUEEN) return minDistToEnemy > micro.minDistToEnemy;
+            if (manager.myType == UnitType.ANT) return minDistToSoldier >= micro.minDistToSoldier;
+            if (manager.myType == UnitType.QUEEN) return minDistToEnemy >= micro.minDistToEnemy;
             if (manager.myType != UnitType.SPIDER && allies >= enemies * 2) return minDistToEnemy <= micro.minDistToEnemy;
             if (numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
             if (numEnemies < micro.numEnemies) return true;
@@ -264,7 +272,7 @@ public class Pathfinder {
             }
             if (micro.canAttack()) return false;
             if (manager.myType == UnitType.SPIDER && manager.myType.getMinAttackRangeSquared() > minDistToEnemy) {
-                return minDistToEnemy > micro.minDistToEnemy;
+                return minDistToEnemy >= micro.minDistToEnemy;
             }
             return minDistToEnemy <= micro.minDistToEnemy;
         }

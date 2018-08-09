@@ -26,7 +26,6 @@ public class Beetle {
         int distance = manager.myLocation.distanceSquared(myQueen);
         int enemies = 0;
         int allies = 1;
-        boolean moveAndKill = false;
 
         for (UnitInfo ally : manager.units) {
             UnitType allyType = ally.getType();
@@ -39,14 +38,34 @@ public class Beetle {
             if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
                 enemies++;
             }
-            if (enemy.getHealth() <= manager.myType.getAttack()) moveAndKill = true;
         }
 
-        if (!moveAndKill && uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
+        boolean moved = false;
+        Direction myQueenDirection = manager.myLocation.directionTo(myQueen);
+        Direction closestEnemy;
+        Direction one;
+        Direction two;
+        Direction three;
+
+        if (manager.enemies.length != 0) {
+            closestEnemy = manager.myLocation.directionTo(manager.enemies[0].getLocation());
+            one = closestEnemy.opposite();
+            two = one.rotateLeft();
+            three = one.rotateRight();
+            if (myQueenDirection.isEqual(one) || myQueenDirection.isEqual(two) || myQueenDirection.isEqual(three)) {
+                if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
+                    manager.path.moveTo(myQueen);
+                    moved = true;
+                }
+            }
+        }
+
+        if (manager.enemies.length != 0 && !moved) {
+            moved = manager.path.evalLocation(allies, enemies);
+        }
+        if (!moved && uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
             manager.path.moveTo(myQueen);
-        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            manager.path.evalLocation(allies, enemies);
-        } else {
+        } else if (!moved) {
             manager.path.moveTo(targetQueen);
         }
 
