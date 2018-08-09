@@ -25,11 +25,15 @@ public class Queen {
         int enemies = 0;
         int allies = 0;
 
-        for (UnitInfo ally : manager.units) {
-            UnitType allyType = ally.getType();
-            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
-                allies++;
+        if (manager.units.length < 10) {
+            for (UnitInfo ally : manager.units) {
+                UnitType allyType = ally.getType();
+                if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                    allies++;
+                }
             }
+        } else {
+            allies = manager.units.length;
         }
         for (UnitInfo enemy : manager.enemies) {
             UnitType enemyType = enemy.getType();
@@ -49,9 +53,7 @@ public class Queen {
         } else if ((foodLoc.x != 0 || foodLoc.y != 0) && manager.myLocation != foodLoc && manager.myLocation.distanceSquared(foodLoc) > 2) {
             manager.path.moveToQueen(foodLoc);
         } else {
-            if (manager.getPassive() != 1 || manager.round > 1000 || manager.myLocation.distanceSquared(uc.getEnemyQueensLocation()[0]) > 200) {
-                manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
-            }
+            manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
         }
         manager.postMoveUpdate();
     }
@@ -192,18 +194,24 @@ public class Queen {
     }
 
     private void tryHeal() {
-        int lowestHealth = 1000;
-        UnitInfo bestTarget = null;
-        for (UnitInfo ally : manager.units) {
-            int health = ally.getHealth();
-            int maxHealth = manager.unitHealth(ally.getType());
-            if (uc.canHeal(ally) && health < lowestHealth && maxHealth != health) {
-                lowestHealth = health;
-                bestTarget = ally;
+        if (manager.units.length != 0) {
+            int lowestHealth = 1000;
+            UnitInfo bestTarget = null;
+            UnitInfo ally;
+            int index = 10;
+            if (index > manager.units.length) index = manager.units.length;
+            for (int i = 0; i < index; i++) {
+                ally = manager.units[i];
+                int health = ally.getHealth();
+                int maxHealth = manager.unitHealth(ally.getType());
+                if (uc.canHeal(ally) && health < lowestHealth && maxHealth != health) {
+                    lowestHealth = health;
+                    bestTarget = ally;
+                }
             }
-        }
-        if (bestTarget != null) {
-            uc.heal(bestTarget);
+            if (bestTarget != null) {
+                uc.heal(bestTarget);
+            }
         }
     }
 }

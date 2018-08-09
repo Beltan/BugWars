@@ -531,7 +531,7 @@ public class MemoryManager {
         int maxFood = 0;
         int foodCount = 0;
 
-        if (food.length < 65) {
+        if (food.length < 60) {
             for (FoodInfo foodUnit : food) {
                 if (!myLocation.isEqual(foodUnit.location)) {
                     if (!isObstructed(foodUnit.location)) {
@@ -589,13 +589,13 @@ public class MemoryManager {
 
     // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return ((1.5 * getSpiders() + 1 >= getBeetles()) ||
-                (enemies.length != 0 && !allObstructed()));
+        return (((1.5 * getSpiders() + 1 >= getBeetles()) ||
+                (enemies.length != 0 && !allObstructed())) && getPassive() == 0);
     }
 
     public boolean canSpawnSpider() {
-        return (((1.5 * getSpiders() + 1 < getBeetles()) || ((enemies.length == 0 || allObstructed()) && (getBeetles() > getSpiders()))) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
+        return (getPassive() == 1 || (((1.5 * getSpiders() + 1 < getBeetles()) || ((enemies.length == 0 || allObstructed()) && (getBeetles() > getSpiders()))) ||
+                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11)));
     }
 
     public boolean canSpawnBee() {
