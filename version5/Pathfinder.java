@@ -188,8 +188,8 @@ public class Pathfinder {
             if (bestIndex < 0 || !microInfo[bestIndex].isBetter(microInfo[i])) bestIndex = i;
         }
 
-        if (bestIndex != -1 && !microInfo[bestIndex].obstructed) {
-            if (manager.enemies.length > 0 && bestIndex != 8) {
+        if (bestIndex != -1 && (!microInfo[8].obstructed || !microInfo[bestIndex].obstructed)) {
+            if (bestIndex != 8) {
                 uc.move(manager.dirs[bestIndex]);
             }
             return true;
@@ -205,6 +205,8 @@ public class Pathfinder {
         int numBeetles;
         int minDistToEnemy;
         int minDistToSoldier;
+        int minDistToSpiderAnt;
+        int minDistToBeetle;
         int numAttacks;
         int allies;
         int enemies;
@@ -224,6 +226,8 @@ public class Pathfinder {
             numAttacks = 0;
             minDistToEnemy = 1000000;
             minDistToSoldier = 1000000;
+            minDistToSpiderAnt = 1000000;
+            minDistToBeetle = 1000000;
             moveAndKill = false;
             obstructed = true;
         }
@@ -231,25 +235,42 @@ public class Pathfinder {
         void update(UnitInfo unit) {
             UnitType type = unit.getType();
             boolean currentObstructed = uc.isObstructed(loc, unit.getLocation());
-            if (obstructed) {
-                obstructed = currentObstructed;
-            }
+            if (obstructed) obstructed = currentObstructed;
             if (!currentObstructed) {
                 int distance = unit.getLocation().distanceSquared(loc);
-                if (distance <= type.getAttackRangeSquared() && distance >= type.getMinAttackRangeSquared()) {
-                    if (type != UnitType.ANT) numEnemies++;
-                    if (type == UnitType.ANT) numAnts++;
-                    if (type == UnitType.SPIDER) numSpiders++;
-                    if (type == UnitType.BEE) numBees++;
-                    if (type == UnitType.BEETLE) numBeetles++;
+                if (type == UnitType.ANT) {
+                    if (distance <= GameConstants.ANT_ATTACK_RANGE_SQUARED) {
+                        numAnts++;
+                    }
+                    if (distance < minDistToSpiderAnt) minDistToSpiderAnt = distance;
                 }
+                else if (type == UnitType.SPIDER) {
+                    if (distance <= GameConstants.SPIDER_ATTACK_RANGE_SQUARED && distance >= GameConstants.MIN_SPIDER_ATTACK_RANGE_SQUARED) {
+                        numSpiders++;
+                        numEnemies++;
+                    }
+                    if (distance < minDistToSpiderAnt) minDistToSpiderAnt = distance;
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
+                } else if (type == UnitType.BEE) {
+                    if (distance <= GameConstants.BEE_ATTACK_RANGE_SQUARED) {
+                        numEnemies++;
+                        numBees++;
+                    }
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
+                } else if (type == UnitType.BEETLE) {
+                    if (distance <= GameConstants.BEETLE_ATTACK_RANGE_SQUARED) {
+                        numEnemies++;
+                        numBeetles++;
+                    }
+                    if (distance < minDistToBeetle) minDistToBeetle = distance;
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
+                }
+
 
                 if (uc.canAttack() && canAttack() && unit.getHealth() <= manager.myType.getAttack()) moveAndKill = true;
                 if (distance <= manager.myType.getAttackRangeSquared() && distance >= manager.myType.getMinAttackRangeSquared())
                     numAttacks++;
                 if (distance < minDistToEnemy) minDistToEnemy = distance;
-                if (distance < minDistToSoldier && type != UnitType.ANT && type != UnitType.QUEEN)
-                    minDistToSoldier = distance;
             }
         }
 
@@ -260,8 +281,15 @@ public class Pathfinder {
         boolean isBetter(MicroInfo micro) {
             if (moveAndKill && !micro.moveAndKill) return true;
             if (!moveAndKill && micro.moveAndKill) return false;
-            if (manager.myType == UnitType.ANT) return minDistToSoldier >= micro.minDistToSoldier;
-            if (manager.myType == UnitType.QUEEN) return minDistToEnemy >= micro.minDistToEnemy;
+            if (manager.myType == UnitType.ANT) return minDistToSoldier > micro.minDistToSoldier;
+            if (manager.myType == UnitType.QUEEN) return minDistToEnemy > micro.minDistToEnemy;
+            if (manager.myType == UnitType.BEE) {
+                if (minDistToSpiderAnt <= 5) {
+                    if (micro.minDistToSpiderAnt > 5) return true;
+                    return minDistToBeetle >= micro.minDistToBeetle;
+                }
+                if (micro.minDistToSpiderAnt <= 5) return false;
+            }
             if (manager.myType != UnitType.SPIDER && allies >= enemies * 2) return minDistToEnemy <= micro.minDistToEnemy;
             if (numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
             if (numEnemies < micro.numEnemies) return true;
@@ -272,7 +300,7 @@ public class Pathfinder {
             }
             if (micro.canAttack()) return false;
             if (manager.myType == UnitType.SPIDER && manager.myType.getMinAttackRangeSquared() > minDistToEnemy) {
-                return minDistToEnemy >= micro.minDistToEnemy;
+                return minDistToEnemy > micro.minDistToEnemy;
             }
             return minDistToEnemy <= micro.minDistToEnemy;
         }

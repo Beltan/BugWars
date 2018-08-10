@@ -88,6 +88,34 @@ public class Queen {
                 }
             }
 
+        } else if (manager.canSpawnBee()) {
+
+            if (uc.canSpawn(target, UnitType.BEE)) {
+                uc.spawn(target, UnitType.BEE);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : manager.dirs) {
+                if (uc.canSpawn(dir, UnitType.BEE)) {
+                    uc.spawn(dir, UnitType.BEE);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
+        } else if (manager.canSpawnSpider()) {
+
+            if (uc.canSpawn(target, UnitType.SPIDER)) {
+                uc.spawn(target, UnitType.SPIDER);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : manager.dirs) {
+                if (uc.canSpawn(dir, UnitType.SPIDER)) {
+                    uc.spawn(dir, UnitType.SPIDER);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
         } else if (manager.objective == UnitType.BEETLE){
 
             if (manager.canSpawnBeetle()) {
@@ -105,34 +133,6 @@ public class Queen {
                     }
                 }
 
-            } else if (manager.canSpawnSpider()) {
-
-                if (uc.canSpawn(target, UnitType.SPIDER)) {
-                    uc.spawn(target, UnitType.SPIDER);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.SPIDER)) {
-                        uc.spawn(dir, UnitType.SPIDER);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
-            } else if (manager.canSpawnBee()) {
-
-                if (uc.canSpawn(target, UnitType.BEE)) {
-                    uc.spawn(target, UnitType.BEE);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.BEE)) {
-                        uc.spawn(dir, UnitType.BEE);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
             }
         }
     }

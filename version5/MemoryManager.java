@@ -577,32 +577,30 @@ public class MemoryManager {
             uc.write(INITIAL_QUEEN_INFO + i * 4, 1);
         }
 
-        return (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
+        return (antCount + cocoonAnts < 20 && (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
                 ((getTotalTroops() > 1.5 * getAnts() || getTotalTroops() > 40) && (enemies.length == 0 || allObstructed()))) &&
                 (myLocation.distanceSquared(closestEnemyQueen()) > 200 || getTotalTroops() > 5) &&
                 (foodCount != 1 || maxFood == foodHealth) && getQueenSeesEnemy() == 0 &&
                 ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.3 > maxFood && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.15 > maxFood && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount)));
+                (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount))));
     }
 
     // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return (((1.5 * getSpiders() + 1 >= getBeetles()) ||
-                (enemies.length != 0 && !allObstructed())) && getPassive() == 0);
+        return ((((enemies.length != 0 && !allObstructed()) || (getBeetles() * 2 <= getSpiders())) &&
+                (getPassive() == 0 || (getBeetles() * 2 <= getSpiders()))) ||
+                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
     public boolean canSpawnSpider() {
-        return (getPassive() == 1 || (((1.5 * getSpiders() + 1 < getBeetles()) || ((enemies.length == 0 || allObstructed()) && (getBeetles() > getSpiders()))) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11)));
+        return (((enemies.length == 0 || allObstructed()) && (getPassive() == 1 || getBeetles() * 2 > getSpiders())) &&
+                ((getBees() + 1) * 3 > getSpiders()));
     }
 
     public boolean canSpawnBee() {
-        return false;
-        /*return ((4 * getBees() + 1 < getBeetles()) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
-                */
+        return ((7 * (getBees() + 1) < getTotalTroops()) || ((getBees() + 1) * 3 <= getSpiders()));
     }
 
     // Add a new cocoon

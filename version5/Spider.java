@@ -26,6 +26,7 @@ public class Spider {
         int distance = manager.myLocation.distanceSquared(myQueen);
         int enemies = 0;
         int allies = 1;
+        boolean moveAndKill = false;
 
         for (UnitInfo ally : manager.units) {
             UnitType allyType = ally.getType();
@@ -38,16 +39,20 @@ public class Spider {
             if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
                 enemies++;
             }
+            if (enemy.getHealth() <= manager.myType.getAttack()) moveAndKill = true;
         }
 
-        boolean moved = false;
-        if (manager.enemies.length != 0) {
-            moved = manager.path.evalLocation(allies, enemies);
-        }
-        if (!moved && uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
-            manager.path.moveTo(myQueen);
-        } else if (!moved) {
-            manager.path.moveTo(targetQueen);
+        boolean moved;
+        moved = manager.path.evalLocation(allies, enemies);
+
+        if (!moved) {
+            if (!moveAndKill && uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
+                manager.path.moveTo(myQueen);
+            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
+                manager.path.evalLocation(allies, enemies);
+            } else {
+                manager.path.moveTo(targetQueen);
+            }
         }
 
         manager.postMoveUpdate();
