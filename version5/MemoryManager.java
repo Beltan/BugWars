@@ -254,7 +254,7 @@ public class MemoryManager {
         uc.write(QUEEN_SEES_ENEMY_CURRENT, 0);
 
         // Resets queen info
-        Location allyQueens[] = uc.getMyQueensLocation();
+        Location[] allyQueens = uc.getMyQueensLocation();
         for (int i = 0; i < allyQueens.length; i++) {
             uc.write(INITIAL_QUEEN_INFO + i * 4, 0);
             uc.write(INITIAL_QUEEN_INFO + 1 + i * 4, 0);
@@ -263,7 +263,7 @@ public class MemoryManager {
         }
 
         // Checks for passive enemy
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         for (int i = 0; i < enemyQueens.length; i++) {
             if (round == 0) {
                 uc.write(INITIAL_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
@@ -301,8 +301,8 @@ public class MemoryManager {
     }
 
     public void roundZeroRootInitialization() {
-        Location myQueens[] = uc.getMyQueensLocation();
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] myQueens = uc.getMyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         Location myQueen = myQueens[0];
         Location enemyQueen = enemyQueens[0];
         int xLow = myQueens[0].x;
@@ -502,8 +502,8 @@ public class MemoryManager {
     }
 
     // Bad but good enough random directions
-    public Direction[] shuffle(Direction list[]) {
-        Direction shuffledList[] = new Direction[8];
+    public Direction[] shuffle(Direction[] list) {
+        Direction[] shuffledList = new Direction[8];
         int random;
 
         for (int i = 0; i < 8; i++) {
@@ -654,17 +654,17 @@ public class MemoryManager {
             return;
         }
 
-        Location myQueens[] = uc.getMyQueensLocation();
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] myQueens = uc.getMyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         Location allowedToSpawnAnts = null;
         Location allowedToSpawnSoldiers = myQueens[0];
 
         int highestFood = 0;
         for (int i = 0; i < uc.getMyQueensLocation().length; i++) {
             int currentFood = uc.read(INITIAL_QUEEN_INFO + 1 + i * 4);
-            int allies = uc.read(INITIAL_QUEEN_INFO + 2 + i * 4);
-            int enemies = uc.read(INITIAL_QUEEN_INFO + 3 + i * 4);
-            if (highestFood < currentFood && allies > enemies) {
+            int ally = uc.read(INITIAL_QUEEN_INFO + 2 + i * 4);
+            int enemy = uc.read(INITIAL_QUEEN_INFO + 3 + i * 4);
+            if (highestFood < currentFood && ally > enemy) {
                 highestFood = currentFood;
                 allowedToSpawnAnts = uc.getMyQueensLocation()[i];
             }
@@ -700,7 +700,7 @@ public class MemoryManager {
     }
 
     public Location closestEnemyQueen() {
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         if (enemyQueens.length == 0) {
             return null;
         }
@@ -718,7 +718,7 @@ public class MemoryManager {
     }
 
     public Location closestAllyQueen() {
-        Location allyQueens[] = uc.getMyQueensLocation();
+        Location[] allyQueens = uc.getMyQueensLocation();
         if (allyQueens.length == 0) {
             return null;
         }
@@ -783,7 +783,9 @@ public class MemoryManager {
     public void postMoveUpdate() {
         myLocation = uc.getLocation();
         enemies = uc.senseUnits(opponent);
+        units = uc.senseUnits(allies);
         rocks = uc.senseObstacles();
+        food = uc.senseFood();
     }
 
     // Getters

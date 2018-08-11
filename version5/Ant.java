@@ -51,23 +51,29 @@ public class Ant {
             }
         }
 
-        if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            manager.path.evalLocation(allies, enemies);
-        } else if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
-            manager.path.evalFoodLocation(bestFood.location);
-        } else if (foodLocNotObs.x != 0 ||foodLocNotObs.y != 0){
-            manager.path.moveTo(foodLoc);
-        } else if (foodLoc.x != 0 ||foodLoc.y != 0){
-            manager.path.moveTo(foodLoc);
-        } else {
-            Direction randomDirections[] = manager.shuffle(manager.dirs);
-            for (Direction dir : randomDirections) {
-                if (uc.canMove(dir)) {
-                    uc.move(dir);
-                    break;
+        boolean moved;
+        moved = manager.path.evalLocation(allies, enemies);
+
+        if (!moved) {
+            if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
+                manager.path.evalFoodLocation(bestFood.location);
+            } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+                manager.path.moveTo(foodLoc);
+            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+                manager.path.moveTo(foodLoc);
+            }
+
+            if (uc.canMove()) {
+                Direction[] randomDirections = manager.shuffle(manager.dirs);
+                for (Direction dir : randomDirections) {
+                    if (uc.canMove(dir)) {
+                        uc.move(dir);
+                        break;
+                    }
                 }
             }
         }
+
         manager.postMoveUpdate();
     }
 

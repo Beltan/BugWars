@@ -6,16 +6,18 @@ public class Queen {
 
     private MemoryManager manager;
     private UnitController uc;
+    private Direction[] dirs;
 
     public Queen(MemoryManager manager) {
         this.manager = manager;
         uc = manager.uc;
+        dirs = manager.shuffle(manager.dirs);
     }
 
     public void play() {
         tryHeal();
-        trySpawn();
         tryMove();
+        trySpawn();
         tryHeal();
     }
 
@@ -80,7 +82,7 @@ public class Queen {
                 manager.addCocoonList(manager.myLocation.add(target));
             }
 
-            for (Direction dir : manager.dirs) {
+            for (Direction dir : dirs) {
                 if (uc.canSpawn(dir, UnitType.ANT)) {
                     uc.spawn(dir, UnitType.ANT);
                     manager.addCocoonList(manager.myLocation.add(dir));
@@ -95,7 +97,7 @@ public class Queen {
                 manager.addCocoonList(manager.myLocation.add(target));
             }
 
-            for (Direction dir : manager.dirs) {
+            for (Direction dir : dirs) {
                 if (uc.canSpawn(dir, UnitType.BEE)) {
                     uc.spawn(dir, UnitType.BEE);
                     manager.addCocoonList(manager.myLocation.add(dir));
@@ -109,7 +111,7 @@ public class Queen {
                 manager.addCocoonList(manager.myLocation.add(target));
             }
 
-            for (Direction dir : manager.dirs) {
+            for (Direction dir : dirs) {
                 if (uc.canSpawn(dir, UnitType.SPIDER)) {
                     uc.spawn(dir, UnitType.SPIDER);
                     manager.addCocoonList(manager.myLocation.add(dir));
@@ -125,7 +127,7 @@ public class Queen {
                     manager.addCocoonList(manager.myLocation.add(target));
                 }
 
-                for (Direction dir : manager.dirs) {
+                for (Direction dir : dirs) {
                     if (uc.canSpawn(dir, UnitType.BEETLE)) {
                         uc.spawn(dir, UnitType.BEETLE);
                         manager.addCocoonList(manager.myLocation.add(dir));
