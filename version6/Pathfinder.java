@@ -1,4 +1,4 @@
-package version4;
+package version6;
 
 import bugwars.user.*;
 
@@ -169,11 +169,11 @@ public class Pathfinder {
         }
     }
 
-    public void evalLocation(int allies, int enemies) {
-        if (!uc.canMove()) return;
+    public boolean evalLocation(int allies, int enemies) {
+        if (!uc.canMove()) return false;
 
         MicroInfo[] microInfo = new MicroInfo[9];
-        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.myLocation.add(manager.dirs[i]), allies, enemies);
+        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies);
 
         for (UnitInfo enemy : manager.enemies) {
             for (int i = 0; i < 9; i++) {
@@ -188,11 +188,13 @@ public class Pathfinder {
             if (bestIndex < 0 || !microInfo[bestIndex].isBetter(microInfo[i])) bestIndex = i;
         }
 
-        if (bestIndex != -1) {
-            if (manager.enemies.length > 0) {
+        if (bestIndex != -1 && (!microInfo[8].obstructed || !microInfo[bestIndex].obstructed)) {
+            if (bestIndex != 8) {
                 uc.move(manager.dirs[bestIndex]);
             }
+            return true;
         }
+        return false;
     }
 
     class MicroInfo {
@@ -201,46 +203,79 @@ public class Pathfinder {
         int numSpiders;
         int numBees;
         int numBeetles;
+        int softAttacks;
         int minDistToEnemy;
         int minDistToSoldier;
-        int numAttacks;
+        int minDistToSpiderAnt;
+        int minDistToBeetle;
         int allies;
         int enemies;
         boolean moveAndKill;
+        boolean obstructed;
+        boolean diagonal = false;
+        Direction dir;
         Location loc;
 
-        public MicroInfo(Location loc, int allies, int enemies) {
-            this.loc = loc;
+        public MicroInfo(Direction dir, int allies, int enemies) {
+            this.dir = dir;
             this.allies = allies;
             this.enemies = enemies;
+            loc = manager.myLocation.add(dir);
             numEnemies = 0;
             numAnts = 0;
             numSpiders = 0;
             numBees = 0;
             numBeetles = 0;
-            numAttacks = 0;
+            softAttacks = 0;
             minDistToEnemy = 1000000;
             minDistToSoldier = 1000000;
+            minDistToSpiderAnt = 1000000;
+            minDistToBeetle = 1000000;
             moveAndKill = false;
+            diagonal = false;
+            obstructed = true;
         }
 
         void update(UnitInfo unit) {
             UnitType type = unit.getType();
-            if (!uc.isObstructed(loc, unit.getLocation())) {
+            boolean currentObstructed = uc.isObstructed(loc, unit.getLocation());
+            if (obstructed) obstructed = currentObstructed;
+            if (!currentObstructed) {
+                if (dir == Direction.NORTHEAST || dir == Direction.NORTHWEST || dir == Direction.SOUTHEAST || dir == Direction.SOUTHWEST) diagonal = true;
                 int distance = unit.getLocation().distanceSquared(loc);
-                if (distance <= type.getAttackRangeSquared() && distance >= type.getMinAttackRangeSquared()) {
-                    if (type != UnitType.ANT) numEnemies++;
-                    if (type == UnitType.ANT) numAnts++;
-                    if (type == UnitType.SPIDER) numSpiders++;
-                    if (type == UnitType.BEE) numBees++;
-                    if (type == UnitType.BEETLE) numBeetles++;
+                if (type == UnitType.ANT) {
+                    if (distance <= GameConstants.ANT_ATTACK_RANGE_SQUARED) {
+                        numAnts++;
+                    }
+                    if (distance < minDistToSpiderAnt) minDistToSpiderAnt = distance;
+                }
+                else if (type == UnitType.SPIDER) {
+                    if (distance <= GameConstants.SPIDER_ATTACK_RANGE_SQUARED && distance >= GameConstants.MIN_SPIDER_ATTACK_RANGE_SQUARED) {
+                        numSpiders++;
+                        numEnemies++;
+                    }
+                    if (distance < 33 && distance > 4) softAttacks++;
+                    if (distance < minDistToSpiderAnt) minDistToSpiderAnt = distance;
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
+                } else if (type == UnitType.BEE) {
+                    if (distance <= GameConstants.BEE_ATTACK_RANGE_SQUARED) {
+                        numEnemies++;
+                        numBees++;
+                    }
+                    if (distance < 14) softAttacks++;
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
+                } else if (type == UnitType.BEETLE) {
+                    if (distance <= GameConstants.BEETLE_ATTACK_RANGE_SQUARED) {
+                        numEnemies++;
+                        numBeetles++;
+                    }
+                    if (distance < 14) softAttacks++;
+                    if (distance < minDistToBeetle) minDistToBeetle = distance;
+                    if (distance < minDistToSoldier) minDistToSoldier = distance;
                 }
 
-                if (distance <= manager.myType.getAttackRangeSquared() && distance >= manager.myType.getMinAttackRangeSquared())
-                    numAttacks++;
+                if (uc.canAttack() && canAttack() && unit.getHealth() <= manager.myType.getAttack()) moveAndKill = true;
                 if (distance < minDistToEnemy) minDistToEnemy = distance;
-                if (distance < minDistToSoldier && type != UnitType.ANT && type != UnitType.QUEEN)
-                    minDistToSoldier = distance;
             }
         }
 
@@ -249,15 +284,33 @@ public class Pathfinder {
         }
 
         boolean isBetter(MicroInfo micro) {
-            if (manager.myType == UnitType.ANT) return minDistToSoldier > micro.minDistToSoldier;
+            if (moveAndKill && !micro.moveAndKill) return true;
+            if (!moveAndKill && micro.moveAndKill) return false;
+            if (manager.myType == UnitType.ANT) {
+                if (obstructed) {
+                    if (!micro.obstructed) return true;
+                    return true;
+                }
+                if (micro.obstructed) return false;
+                return minDistToSoldier > micro.minDistToSoldier;
+            }
             if (manager.myType == UnitType.QUEEN) return minDistToEnemy > micro.minDistToEnemy;
+            if (manager.myType == UnitType.BEE) {
+                if (minDistToBeetle > 14 && micro.minDistToBeetle <= 14) return true;
+                if (minDistToBeetle <= 14 && micro.minDistToBeetle > 14) return false;
+                if (minDistToSpiderAnt == micro.minDistToSpiderAnt) return softAttacks < micro.softAttacks;
+                return minDistToSpiderAnt <= micro.minDistToSpiderAnt;
+            }
             if (manager.myType != UnitType.SPIDER && allies >= enemies * 2) return minDistToEnemy <= micro.minDistToEnemy;
             if (numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
-            if (numEnemies < micro.numEnemies) return true;
-            if (numEnemies > micro.numEnemies) return false;
+            if (softAttacks < micro.softAttacks) return true;
+            if (softAttacks > micro.softAttacks) return false;
             if (canAttack()) {
                 if (!micro.canAttack()) return true;
-                return minDistToEnemy >= micro.minDistToEnemy;
+                if (minDistToEnemy == micro.minDistToEnemy) {
+                    return !diagonal;
+                }
+                return minDistToEnemy > micro.minDistToEnemy;
             }
             if (micro.canAttack()) return false;
             if (manager.myType == UnitType.SPIDER && manager.myType.getMinAttackRangeSquared() > minDistToEnemy) {

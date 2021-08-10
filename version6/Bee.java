@@ -1,4 +1,4 @@
-package version4;
+package version6;
 
 import bugwars.user.*;
 
@@ -52,7 +52,7 @@ public class Bee {
                 }
             }
 
-            if (smallestRock != 10000000) {
+            if (smallestRock < 200) {
                 uc.attack(weakerRock);
             }
         }
@@ -80,9 +80,7 @@ public class Bee {
             }
         }
 
-        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 6)) {
-            manager.path.moveTo(myQueen);
-        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
+        if (manager.enemies.length != 0 && !manager.allObstructed()) {
             manager.path.evalLocation(allies, enemies);
         } else {
             manager.path.moveTo(targetQueen);

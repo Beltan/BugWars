@@ -1,6 +1,6 @@
 package version5;
 
-import bugwars.*;
+import bugwars.user.*;
 
 public class Pathfinder {
 

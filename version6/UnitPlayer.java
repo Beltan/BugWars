@@ -1,6 +1,7 @@
-package version4;
+package version6;
 
-import bugwars.user.*;
+import bugwars.user.UnitController;
+import bugwars.user.UnitType;
 
 public class UnitPlayer {
 

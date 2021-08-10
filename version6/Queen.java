@@ -1,4 +1,4 @@
-package version4;
+package version6;
 
 import bugwars.user.*;
 
@@ -6,16 +6,18 @@ public class Queen {
 
     private MemoryManager manager;
     private UnitController uc;
+    private Direction[] dirs;
 
     public Queen(MemoryManager manager) {
         this.manager = manager;
         uc = manager.uc;
+        dirs = manager.shuffle(manager.dirs);
     }
 
     public void play() {
         tryHeal();
-        trySpawn();
         tryMove();
+        trySpawn();
         tryHeal();
     }
 
@@ -80,7 +82,7 @@ public class Queen {
                 manager.addCocoonList(manager.myLocation.add(target));
             }
 
-            for (Direction dir : manager.dirs) {
+            for (Direction dir : dirs) {
                 if (uc.canSpawn(dir, UnitType.ANT)) {
                     uc.spawn(dir, UnitType.ANT);
                     manager.addCocoonList(manager.myLocation.add(dir));
@@ -88,6 +90,34 @@ public class Queen {
                 }
             }
 
+        } else if (manager.canSpawnBee()) {
+
+            if (uc.canSpawn(target, UnitType.BEE)) {
+                uc.spawn(target, UnitType.BEE);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : dirs) {
+                if (uc.canSpawn(dir, UnitType.BEE)) {
+                    uc.spawn(dir, UnitType.BEE);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
+        } else if (manager.canSpawnSpider()) {
+
+            if (uc.canSpawn(target, UnitType.SPIDER)) {
+                uc.spawn(target, UnitType.SPIDER);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : dirs) {
+                if (uc.canSpawn(dir, UnitType.SPIDER)) {
+                    uc.spawn(dir, UnitType.SPIDER);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
         } else if (manager.objective == UnitType.BEETLE){
 
             if (manager.canSpawnBeetle()) {
@@ -97,7 +127,7 @@ public class Queen {
                     manager.addCocoonList(manager.myLocation.add(target));
                 }
 
-                for (Direction dir : manager.dirs) {
+                for (Direction dir : dirs) {
                     if (uc.canSpawn(dir, UnitType.BEETLE)) {
                         uc.spawn(dir, UnitType.BEETLE);
                         manager.addCocoonList(manager.myLocation.add(dir));
@@ -105,34 +135,6 @@ public class Queen {
                     }
                 }
 
-            } else if (manager.canSpawnSpider()) {
-
-                if (uc.canSpawn(target, UnitType.SPIDER)) {
-                    uc.spawn(target, UnitType.SPIDER);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.SPIDER)) {
-                        uc.spawn(dir, UnitType.SPIDER);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
-            } else if (manager.canSpawnBee()) {
-
-                if (uc.canSpawn(target, UnitType.BEE)) {
-                    uc.spawn(target, UnitType.BEE);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.BEE)) {
-                        uc.spawn(dir, UnitType.BEE);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
             }
         }
     }

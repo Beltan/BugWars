@@ -1,4 +1,4 @@
-package version5;
+package version6;
 
 import bugwars.user.*;
 
@@ -90,7 +90,7 @@ public class Beetle {
                 }
             }
 
-            if (smallestRock != 10000000) {
+            if (smallestRock < 200) {
                 uc.attack(weakerRock);
             }
         }

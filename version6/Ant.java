@@ -1,29 +1,28 @@
-package version5;
+package version6;
 
 import bugwars.user.*;
 
-public class Beetle {
+public class Ant {
 
     private MemoryManager manager;
     private UnitController uc;
 
-    public Beetle(MemoryManager manager) {
+    public Ant(MemoryManager manager) {
         this.manager = manager;
         uc = manager.uc;
     }
 
     public void play() {
         tryAttack();
+        tryHarvest();
         tryMove();
         tryAttack();
+        tryHarvest();
     }
 
     private void tryMove() {
         if (!uc.canMove()) return;
 
-        Location myQueen = manager.closestAllyQueen();
-        Location targetQueen = manager.closestEnemyQueen();
-        int distance = manager.myLocation.distanceSquared(myQueen);
         int enemies = 0;
         int allies = 1;
 
@@ -40,20 +39,64 @@ public class Beetle {
             }
         }
 
+        Location foodLoc = manager.getIdleFoodLocation();
+        Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
+        FoodInfo bestFood = null;
+        int maxAmount = 0;
+
+        for (FoodInfo food : manager.food) {
+            if (food.food > maxAmount && !manager.isObstructed(food.location)) {
+                maxAmount = food.food;
+                bestFood = food;
+            }
+        }
+
         boolean moved;
         moved = manager.path.evalLocation(allies, enemies);
 
         if (!moved) {
-            if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
-                manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                manager.path.evalLocation(allies, enemies);
-            } else {
-                manager.path.moveTo(targetQueen);
+            if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
+                manager.path.evalFoodLocation(bestFood.location);
+            } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+                manager.path.moveTo(foodLoc);
+            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+                manager.path.moveTo(foodLoc);
+            }
+
+            if (uc.canMove()) {
+                Direction[] randomDirections = manager.shuffle(manager.dirs);
+                for (Direction dir : randomDirections) {
+                    if (uc.canMove(dir)) {
+                        uc.move(dir);
+                        break;
+                    }
+                }
             }
         }
 
         manager.postMoveUpdate();
+    }
+
+    private void tryHarvest() {
+        if (!uc.canMine()) return;
+
+        if (manager.food.length != 0) {
+            int maxAmount = 0;
+            FoodInfo bestFood = manager.food[0];
+
+            for (FoodInfo food : manager.food) {
+                if (uc.canMine(food)) {
+                    if (food.food > maxAmount) {
+                        maxAmount = food.food;
+                        bestFood = food;
+                    }
+                }
+            }
+
+            if (maxAmount != 0) {
+                uc.mine(bestFood);
+            }
+        }
     }
 
     private void tryAttack() {
@@ -77,7 +120,7 @@ public class Beetle {
             if (smallestHealth != 1000000) {
                 uc.attack(lowestEnemy);
             }
-        } else {
+        } else if (manager.rocks.length != 0) {
             int smallestRock = 10000000;
             int durability;
             RockInfo weakerRock = manager.rocks[0];

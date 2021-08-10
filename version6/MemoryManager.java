@@ -1,4 +1,4 @@
-package version4;
+package version6;
 
 import bugwars.user.*;
 
@@ -254,7 +254,7 @@ public class MemoryManager {
         uc.write(QUEEN_SEES_ENEMY_CURRENT, 0);
 
         // Resets queen info
-        Location allyQueens[] = uc.getMyQueensLocation();
+        Location[] allyQueens = uc.getMyQueensLocation();
         for (int i = 0; i < allyQueens.length; i++) {
             uc.write(INITIAL_QUEEN_INFO + i * 4, 0);
             uc.write(INITIAL_QUEEN_INFO + 1 + i * 4, 0);
@@ -263,7 +263,7 @@ public class MemoryManager {
         }
 
         // Checks for passive enemy
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         for (int i = 0; i < enemyQueens.length; i++) {
             if (round == 0) {
                 uc.write(INITIAL_ENEMY_QUEENS + i * 2, enemyQueens[i].x);
@@ -301,8 +301,8 @@ public class MemoryManager {
     }
 
     public void roundZeroRootInitialization() {
-        Location myQueens[] = uc.getMyQueensLocation();
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] myQueens = uc.getMyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         Location myQueen = myQueens[0];
         Location enemyQueen = enemyQueens[0];
         int xLow = myQueens[0].x;
@@ -502,8 +502,8 @@ public class MemoryManager {
     }
 
     // Bad but good enough random directions
-    public Direction[] shuffle(Direction list[]) {
-        Direction shuffledList[] = new Direction[8];
+    public Direction[] shuffle(Direction[] list) {
+        Direction[] shuffledList = new Direction[8];
         int random;
 
         for (int i = 0; i < 8; i++) {
@@ -557,6 +557,8 @@ public class MemoryManager {
             }
         }
 
+        if (bestFood == null) return false;
+
         int antCount = 0;
         int cocoonAnts = 0;
         for (UnitInfo unit : units) {
@@ -577,32 +579,30 @@ public class MemoryManager {
             uc.write(INITIAL_QUEEN_INFO + i * 4, 1);
         }
 
-        return (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
+        return (antCount + cocoonAnts < 20 && (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
                 ((getTotalTroops() > 1.5 * getAnts() || getTotalTroops() > 40) && (enemies.length == 0 || allObstructed()))) &&
                 (myLocation.distanceSquared(closestEnemyQueen()) > 200 || getTotalTroops() > 5) &&
                 (foodCount != 1 || maxFood == foodHealth) && getQueenSeesEnemy() == 0 &&
                 ((foodHealth * 1.5 > maxFood && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.3 > maxFood && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
                 (foodHealth * 1.15 > maxFood && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount)));
+                (foodHealth * 1.1 > maxFood && antCount * 1.5 + 4 * cocoonAnts < foodCount))));
     }
 
     // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return (((1.5 * getSpiders() + 1 >= getBeetles()) ||
-                (enemies.length != 0 && !allObstructed())) && getPassive() == 0);
+        return ((((enemies.length != 0 && !allObstructed()) || (getBeetles() * 2 <= getSpiders())) &&
+                (getPassive() == 0 || (getBeetles() * 2 <= getSpiders()))) ||
+                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
     public boolean canSpawnSpider() {
-        return (getPassive() == 1 || (((1.5 * getSpiders() + 1 < getBeetles()) || ((enemies.length == 0 || allObstructed()) && (getBeetles() > getSpiders()))) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11)));
+        return (((enemies.length == 0 || allObstructed()) && (getPassive() == 1 || getBeetles() * 2 > getSpiders())) &&
+                ((getBees() + 1) * 3 > getSpiders()));
     }
 
     public boolean canSpawnBee() {
-        return false;
-        /*return ((4 * getBees() + 1 < getBeetles()) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
-                */
+        return ((7 * (getBees() + 1) < getTotalTroops()) || ((getBees() + 1) * 3 <= getSpiders()));
     }
 
     // Add a new cocoon
@@ -656,17 +656,17 @@ public class MemoryManager {
             return;
         }
 
-        Location myQueens[] = uc.getMyQueensLocation();
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] myQueens = uc.getMyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         Location allowedToSpawnAnts = null;
         Location allowedToSpawnSoldiers = myQueens[0];
 
         int highestFood = 0;
         for (int i = 0; i < uc.getMyQueensLocation().length; i++) {
             int currentFood = uc.read(INITIAL_QUEEN_INFO + 1 + i * 4);
-            int allies = uc.read(INITIAL_QUEEN_INFO + 2 + i * 4);
-            int enemies = uc.read(INITIAL_QUEEN_INFO + 3 + i * 4);
-            if (highestFood < currentFood && allies > enemies) {
+            int ally = uc.read(INITIAL_QUEEN_INFO + 2 + i * 4);
+            int enemy = uc.read(INITIAL_QUEEN_INFO + 3 + i * 4);
+            if (highestFood < currentFood && ally > enemy) {
                 highestFood = currentFood;
                 allowedToSpawnAnts = uc.getMyQueensLocation()[i];
             }
@@ -702,7 +702,7 @@ public class MemoryManager {
     }
 
     public Location closestEnemyQueen() {
-        Location enemyQueens[] = uc.getEnemyQueensLocation();
+        Location[] enemyQueens = uc.getEnemyQueensLocation();
         if (enemyQueens.length == 0) {
             return null;
         }
@@ -720,7 +720,7 @@ public class MemoryManager {
     }
 
     public Location closestAllyQueen() {
-        Location allyQueens[] = uc.getMyQueensLocation();
+        Location[] allyQueens = uc.getMyQueensLocation();
         if (allyQueens.length == 0) {
             return null;
         }
@@ -785,7 +785,9 @@ public class MemoryManager {
     public void postMoveUpdate() {
         myLocation = uc.getLocation();
         enemies = uc.senseUnits(opponent);
+        units = uc.senseUnits(allies);
         rocks = uc.senseObstacles();
+        food = uc.senseFood();
     }
 
     // Getters
