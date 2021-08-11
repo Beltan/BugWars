@@ -22,6 +22,12 @@ public class MemoryManager {
     public UnitType objective;
     public RockInfo[] rocks;
     public Pathfinder path;
+    public int enemyBeetles;
+    public int enemySpiders;
+    public int enemyBees;
+    public int allyBeetles;
+    public int allySpiders;
+    public int allyBees;
 
     // Shared memory
     // 0 to 99 are general information and states
@@ -110,6 +116,26 @@ public class MemoryManager {
         enemies = uc.senseUnits(opponent);
         food = uc.senseFood();
         rocks = uc.senseObstacles();
+
+        enemyBeetles = 0;
+        enemySpiders = 0;
+        enemyBees = 0;
+        for (UnitInfo enemy: enemies) {
+            UnitType type = enemy.getType();
+            if (type == UnitType.BEETLE) enemyBeetles++;
+            if (type == UnitType.SPIDER) enemySpiders++;
+            if (type == UnitType.BEE) enemyBees++;
+        }
+
+        allyBeetles = 0;
+        allySpiders = 0;
+        allyBees = 0;
+        for (UnitInfo ally: units) {
+            UnitType type = ally.getType();
+            if (type == UnitType.BEETLE) allyBeetles++;
+            if (type == UnitType.SPIDER) allySpiders++;
+            if (type == UnitType.BEE) allyBees++;
+        }
 
         // Root check
         uc.write(CURRENT_ROUND, round);
@@ -591,8 +617,8 @@ public class MemoryManager {
 
     // Soldiers spawn conditions
     public boolean canSpawnBeetle() {
-        return ((((enemies.length != 0 && !allObstructed()) || (getBeetles() * 2 <= getSpiders())) &&
-                (getPassive() == 0 || (getBeetles() * 2 <= getSpiders()))) ||
+        return ((((enemyBeetles + enemyBees > allyBeetles) && !allObstructed()) ||
+                (getPassive() == 0 && (getBeetles() * 2 <= getSpiders()))) ||
                 (myLocation.distanceSquared(closestEnemyQueen()) < 201 && getTotalTroops() < 11));
     }
 
@@ -602,7 +628,7 @@ public class MemoryManager {
     }
 
     public boolean canSpawnBee() {
-        return ((7 * (getBees() + 1) < getTotalTroops()) || ((getBees() + 1) * 3 <= getSpiders()));
+        return ((enemySpiders > allyBees && !allObstructed()) || (7 * (getBees() + 1) < getTotalTroops()) || ((getBees() + 1) * 3 <= getSpiders()));
     }
 
     // Add a new cocoon

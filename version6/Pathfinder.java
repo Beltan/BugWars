@@ -181,6 +181,11 @@ public class Pathfinder {
             }
         }
 
+        boolean obstruectedEnemies = (microInfo[0].obstructed && microInfo[1].obstructed && microInfo[2].obstructed && microInfo[3].obstructed &&
+                microInfo[4].obstructed && microInfo[5].obstructed && microInfo[6].obstructed && microInfo[7].obstructed && microInfo[8].obstructed);
+
+        if (obstruectedEnemies) return false;
+
         int bestIndex = -1;
 
         for (int i = 8; i >= 0; i--) {
@@ -188,7 +193,7 @@ public class Pathfinder {
             if (bestIndex < 0 || !microInfo[bestIndex].isBetter(microInfo[i])) bestIndex = i;
         }
 
-        if (bestIndex != -1 && (!microInfo[8].obstructed || !microInfo[bestIndex].obstructed)) {
+        if (bestIndex != -1) {
             if (bestIndex != 8) {
                 uc.move(manager.dirs[bestIndex]);
             }
@@ -254,7 +259,9 @@ public class Pathfinder {
                         numSpiders++;
                         numEnemies++;
                     }
-                    if (distance < 33 && distance > 4) softAttacks++;
+                    if (manager.myType != UnitType.BEE) {
+                        if (distance < 33 && distance > 4) softAttacks++;
+                    }
                     if (distance < minDistToSpiderAnt) minDistToSpiderAnt = distance;
                     if (distance < minDistToSoldier) minDistToSoldier = distance;
                 } else if (type == UnitType.BEE) {
@@ -296,15 +303,16 @@ public class Pathfinder {
             }
             if (manager.myType == UnitType.QUEEN) return minDistToEnemy > micro.minDistToEnemy;
             if (manager.myType == UnitType.BEE) {
-                if (minDistToBeetle > 14 && micro.minDistToBeetle <= 14) return true;
-                if (minDistToBeetle <= 14 && micro.minDistToBeetle > 14) return false;
-                if (minDistToSpiderAnt == micro.minDistToSpiderAnt) return softAttacks < micro.softAttacks;
-                return minDistToSpiderAnt <= micro.minDistToSpiderAnt;
+                if (minDistToSpiderAnt <= 5) {
+                    if (micro.minDistToSpiderAnt > 5) return true;
+                    return minDistToBeetle >= micro.minDistToBeetle;
+                }
+                if (micro.minDistToSpiderAnt <= 5) return false;
             }
             if (manager.myType != UnitType.SPIDER && allies >= enemies * 2) return minDistToEnemy <= micro.minDistToEnemy;
-            if (numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
-            if (softAttacks < micro.softAttacks) return true;
-            if (softAttacks > micro.softAttacks) return false;
+            if (manager.myType != UnitType.SPIDER && numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
+            if (numEnemies < micro.numEnemies) return true;
+            if (numEnemies > micro.numEnemies) return false;
             if (canAttack()) {
                 if (!micro.canAttack()) return true;
                 if (minDistToEnemy == micro.minDistToEnemy) {

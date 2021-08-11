@@ -52,7 +52,7 @@ public class Bee {
                 }
             }
 
-            if (smallestRock < 200) {
+            if (smallestRock != 1000000) {
                 uc.attack(weakerRock);
             }
         }

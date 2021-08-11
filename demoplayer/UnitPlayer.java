@@ -1,6 +1,6 @@
 package demoplayer;
 
-import bugwars.*;
+import bugwars.user.*;
 
 public class UnitPlayer {
 
