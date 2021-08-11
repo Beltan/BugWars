@@ -1,4 +1,4 @@
-package version2;
+package version7;
 
 import bugwars.user.*;
 
@@ -39,7 +39,7 @@ public class Bee {
             if (smallestHealth != 1000000) {
                 uc.attack(lowestEnemy);
             }
-        } else if (manager.rocks.length != 0) {
+        } else {
             int smallestRock = 10000000;
             int durability;
             RockInfo weakerRock = manager.rocks[0];
@@ -52,37 +52,21 @@ public class Bee {
                 }
             }
 
-            if (smallestRock != 10000000) {
+            if (smallestRock != 1000000) {
                 uc.attack(weakerRock);
             }
         }
     }
 
     private void tryMove() {
+        if (!uc.canMove()) return;
+
         Location myQueen = manager.closestAllyQueen();
         Location targetQueen = manager.closestEnemyQueen();
         int distance = manager.myLocation.distanceSquared(myQueen);
-
-        if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5) {
-            manager.path.moveTo(myQueen);
-        } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            evalLocation();
-        } else {
-            manager.path.moveTo(targetQueen);
-        }
-
-        manager.myLocation = uc.getLocation();
-        manager.enemies = uc.senseUnits(manager.opponent);
-    }
-
-    private void evalLocation() {
-        if (!uc.canMove()) return;
-
-        Direction bestDirection = manager.dirs[8];
-        int bestValue = -100000;
-
         int enemies = 0;
         int allies = 1;
+
         for (UnitInfo ally : manager.units) {
             UnitType allyType = ally.getType();
             if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
@@ -96,36 +80,12 @@ public class Bee {
             }
         }
 
-        for (int i = 0; i < manager.dirs.length; i++) {
-            Location newLoc = manager.myLocation.add(manager.dirs[i]);
-            if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
-                int value = 0;
-                for (int j = 0; j < manager.enemies.length; j++) {
-                    Location target = manager.enemies[j].getLocation();
-                    int distance = newLoc.distanceSquared(target);
-                    if (!manager.isObstructed(target) && allies > enemies * 1.2) {
-                        if (distance < 3) {
-                            value -= 100;
-                        } else if (distance < 6) {
-                            value += 100;
-                        } else {
-                            value -= distance;
-                        }
-                    } else {
-                        value -= 100 / (distance + 1);
-                    }
-                }
-
-                if (value >= bestValue) {
-                    bestDirection = manager.dirs[i];
-                    bestValue = value;
-                }
-            }
+        if (manager.enemies.length != 0 && !manager.allObstructed()) {
+            manager.path.evalLocation(allies, enemies);
+        } else {
+            manager.path.moveTo(targetQueen);
         }
 
-        if (bestValue != -100000 && uc.canMove(bestDirection)) {
-            uc.move(bestDirection);
-        }
+        manager.postMoveUpdate();
     }
-
 }

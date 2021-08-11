@@ -624,7 +624,7 @@ public class MemoryManager {
 
     public boolean canSpawnSpider() {
         return (((enemies.length == 0 || allObstructed()) && (getPassive() == 1 || getBeetles() * 2 > getSpiders())) &&
-                ((getBees() + 1) * 3 > getSpiders()));
+                ((getBees() + 1) * 3 > getSpiders()) && rocks.length < 14);
     }
 
     public boolean canSpawnBee() {

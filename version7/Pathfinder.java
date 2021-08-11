@@ -1,4 +1,4 @@
-package version6;
+package version7;
 
 import bugwars.user.*;
 

@@ -1,4 +1,4 @@
-package version3;
+package version7;
 
 import bugwars.user.*;
 
@@ -6,26 +6,48 @@ public class Queen {
 
     private MemoryManager manager;
     private UnitController uc;
+    private Direction[] dirs;
 
     public Queen(MemoryManager manager) {
         this.manager = manager;
         uc = manager.uc;
+        dirs = manager.shuffle(manager.dirs);
     }
 
     public void play() {
         tryHeal();
-        trySpawn();
         tryMove();
+        trySpawn();
         tryHeal();
     }
 
     private void tryMove() {
         if (!uc.canMove()) return;
 
+        int enemies = 0;
+        int allies = 0;
+
+        if (manager.units.length < 10) {
+            for (UnitInfo ally : manager.units) {
+                UnitType allyType = ally.getType();
+                if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                    allies++;
+                }
+            }
+        } else {
+            allies = manager.units.length;
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
+                enemies++;
+            }
+        }
+
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
         Location foodLoc = manager.getIdleFoodLocation();
         if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            evalLocation();
+            manager.path.evalLocation(allies, enemies);
         } else if (manager.bestFood != null && manager.myLocation != manager.bestFood && manager.myLocation.distanceSquared(manager.bestFood) > 2) {
             manager.path.moveToQueen(manager.bestFood);
         } else if ((foodLocNotObs.x != 0 || foodLocNotObs.y != 0) && manager.myLocation != foodLocNotObs && manager.myLocation.distanceSquared(foodLocNotObs) > 2) {
@@ -33,9 +55,7 @@ public class Queen {
         } else if ((foodLoc.x != 0 || foodLoc.y != 0) && manager.myLocation != foodLoc && manager.myLocation.distanceSquared(foodLoc) > 2) {
             manager.path.moveToQueen(foodLoc);
         } else {
-            if (manager.getPassive() != 1 || manager.round > 1000 || manager.myLocation.distanceSquared(uc.getEnemyQueensLocation()[0]) > 200) {
-                manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
-            }
+            manager.path.moveToQueen(uc.getEnemyQueensLocation()[0]);
         }
         manager.postMoveUpdate();
     }
@@ -62,7 +82,7 @@ public class Queen {
                 manager.addCocoonList(manager.myLocation.add(target));
             }
 
-            for (Direction dir : manager.dirs) {
+            for (Direction dir : dirs) {
                 if (uc.canSpawn(dir, UnitType.ANT)) {
                     uc.spawn(dir, UnitType.ANT);
                     manager.addCocoonList(manager.myLocation.add(dir));
@@ -70,6 +90,34 @@ public class Queen {
                 }
             }
 
+        } else if (manager.canSpawnBee()) {
+
+            if (uc.canSpawn(target, UnitType.BEE)) {
+                uc.spawn(target, UnitType.BEE);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : dirs) {
+                if (uc.canSpawn(dir, UnitType.BEE)) {
+                    uc.spawn(dir, UnitType.BEE);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
+        } else if (manager.canSpawnSpider()) {
+
+            if (uc.canSpawn(target, UnitType.SPIDER)) {
+                uc.spawn(target, UnitType.SPIDER);
+                manager.addCocoonList(manager.myLocation.add(target));
+            }
+
+            for (Direction dir : dirs) {
+                if (uc.canSpawn(dir, UnitType.SPIDER)) {
+                    uc.spawn(dir, UnitType.SPIDER);
+                    manager.addCocoonList(manager.myLocation.add(dir));
+                    break;
+                }
+            }
         } else if (manager.objective == UnitType.BEETLE){
 
             if (manager.canSpawnBeetle()) {
@@ -79,7 +127,7 @@ public class Queen {
                     manager.addCocoonList(manager.myLocation.add(target));
                 }
 
-                for (Direction dir : manager.dirs) {
+                for (Direction dir : dirs) {
                     if (uc.canSpawn(dir, UnitType.BEETLE)) {
                         uc.spawn(dir, UnitType.BEETLE);
                         manager.addCocoonList(manager.myLocation.add(dir));
@@ -87,34 +135,6 @@ public class Queen {
                     }
                 }
 
-            } else if (manager.canSpawnSpider()) {
-
-                if (uc.canSpawn(target, UnitType.SPIDER)) {
-                    uc.spawn(target, UnitType.SPIDER);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.SPIDER)) {
-                        uc.spawn(dir, UnitType.SPIDER);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
-            } else if (manager.canSpawnBee()) {
-
-                if (uc.canSpawn(target, UnitType.BEE)) {
-                    uc.spawn(target, UnitType.BEE);
-                    manager.addCocoonList(manager.myLocation.add(target));
-                }
-
-                for (Direction dir : manager.dirs) {
-                    if (uc.canSpawn(dir, UnitType.BEE)) {
-                        uc.spawn(dir, UnitType.BEE);
-                        manager.addCocoonList(manager.myLocation.add(dir));
-                        break;
-                    }
-                }
             }
         }
     }
@@ -176,18 +196,24 @@ public class Queen {
     }
 
     private void tryHeal() {
-        int lowestHealth = 1000;
-        UnitInfo bestTarget = null;
-        for (UnitInfo ally : manager.units) {
-            int health = ally.getHealth();
-            int maxHealth = manager.unitHealth(ally.getType());
-            if (uc.canHeal(ally) && health < lowestHealth && maxHealth != health) {
-                lowestHealth = health;
-                bestTarget = ally;
+        if (manager.units.length != 0) {
+            int lowestHealth = 1000;
+            UnitInfo bestTarget = null;
+            UnitInfo ally;
+            int index = 10;
+            if (index > manager.units.length) index = manager.units.length;
+            for (int i = 0; i < index; i++) {
+                ally = manager.units[i];
+                int health = ally.getHealth();
+                int maxHealth = manager.unitHealth(ally.getType());
+                if (uc.canHeal(ally) && health < lowestHealth && maxHealth != health) {
+                    lowestHealth = health;
+                    bestTarget = ally;
+                }
             }
-        }
-        if (bestTarget != null) {
-            uc.heal(bestTarget);
+            if (bestTarget != null) {
+                uc.heal(bestTarget);
+            }
         }
     }
 }

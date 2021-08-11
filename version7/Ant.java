@@ -1,4 +1,4 @@
-package version3;
+package version7;
 
 import bugwars.user.*;
 
@@ -22,6 +22,23 @@ public class Ant {
 
     private void tryMove() {
         if (!uc.canMove()) return;
+
+        int enemies = 0;
+        int allies = 1;
+
+        for (UnitInfo ally : manager.units) {
+            UnitType allyType = ally.getType();
+            if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
+                allies++;
+            }
+        }
+        for (UnitInfo enemy : manager.enemies) {
+            UnitType enemyType = enemy.getType();
+            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
+                enemies++;
+            }
+        }
+
         Location foodLoc = manager.getIdleFoodLocation();
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
         FoodInfo bestFood = null;
@@ -34,23 +51,29 @@ public class Ant {
             }
         }
 
-        if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            evalLocation();
-        } else if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
-            manager.path.moveTo(bestFood.location);
-        } else if (foodLocNotObs.x != 0 ||foodLocNotObs.y != 0){
-            manager.path.moveTo(foodLoc);
-        } else if (foodLoc.x != 0 ||foodLoc.y != 0){
-            manager.path.moveTo(foodLoc);
-        } else {
-            Direction randomDirections[] = manager.shuffle(manager.dirs);
-            for (Direction dir : randomDirections) {
-                if (uc.canMove(dir)) {
-                    uc.move(dir);
-                    break;
+        boolean moved;
+        moved = manager.path.evalLocation(allies, enemies);
+
+        if (!moved) {
+            if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
+                manager.path.evalFoodLocation(bestFood.location);
+            } else if (foodLocNotObs.x != 0 || foodLocNotObs.y != 0) {
+                manager.path.moveTo(foodLoc);
+            } else if (foodLoc.x != 0 || foodLoc.y != 0) {
+                manager.path.moveTo(foodLoc);
+            }
+
+            if (uc.canMove()) {
+                Direction[] randomDirections = manager.shuffle(manager.dirs);
+                for (Direction dir : randomDirections) {
+                    if (uc.canMove(dir)) {
+                        uc.move(dir);
+                        break;
+                    }
                 }
             }
         }
+
         manager.postMoveUpdate();
     }
 
@@ -113,34 +136,6 @@ public class Ant {
             if (smallestRock != 10000000) {
                 uc.attack(weakerRock);
             }
-        }
-    }
-
-    private void evalLocation() {
-        Direction bestDirection = manager.dirs[8];
-        int bestValue = -100000;
-
-        for (int i = 0; i < manager.dirs.length; i++) {
-            Location newLoc = manager.myLocation.add(manager.dirs[i]);
-            if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
-                int value = 0;
-                for (int j = 0; j < manager.enemies.length; j++) {
-                    Location target = manager.enemies[j].getLocation();
-                    int distance = newLoc.distanceSquared(target);
-                    if (!manager.isObstructed(target)) {
-                        value += distance;
-                    }
-                }
-
-                if (value >= bestValue) {
-                    bestDirection = manager.dirs[i];
-                    bestValue = value;
-                }
-            }
-        }
-
-        if (bestValue != -100000 && uc.canMove(bestDirection)) {
-            uc.move(bestDirection);
         }
     }
 }

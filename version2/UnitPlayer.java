@@ -1,6 +1,6 @@
 package version2;
 
-import bugwars.*;
+import bugwars.user.*;
 
 public class UnitPlayer {
 

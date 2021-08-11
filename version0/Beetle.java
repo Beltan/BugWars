@@ -1,6 +1,6 @@
 package version0;
 
-import bugwars.*;
+import bugwars.user.*;
 
 public class Beetle {
 

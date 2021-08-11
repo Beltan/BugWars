@@ -1,6 +1,6 @@
 package version3;
 
-import bugwars.*;
+import bugwars.user.*;
 
 public class Spider {
 
