@@ -172,8 +172,26 @@ public class Pathfinder {
     public boolean evalLocation(int allies, int enemies) {
         if (!uc.canMove()) return false;
 
+        Location closestAllyWounded = null;
+        int dist = 1000000;
+        if (manager.myType == UnitType.QUEEN) {
+            for (UnitInfo ally : manager.units) {
+                UnitType allyType = ally.getType();
+                if (ally.getHealth() < manager.unitHealth(allyType)) {
+                    Location allyLoc = ally.getLocation();
+                    if (!uc.isObstructed(manager.myLocation, allyLoc)) {
+                        int currentDistance = manager.myLocation.distanceSquared(allyLoc);
+                        if (dist > currentDistance) {
+                            dist = currentDistance;
+                            closestAllyWounded = allyLoc;
+                        }
+                    }
+                }
+            }
+        }
+
         MicroInfo[] microInfo = new MicroInfo[9];
-        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies);
+        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies, closestAllyWounded, dist);
 
         for (UnitInfo enemy : manager.enemies) {
             for (int i = 0; i < 9; i++) {
@@ -213,18 +231,23 @@ public class Pathfinder {
         int minDistToSoldier;
         int minDistToSpiderAnt;
         int minDistToBeetle;
+        int minDistToWoundedAlly;
         int allies;
         int enemies;
         boolean moveAndKill;
         boolean obstructed;
-        boolean diagonal = false;
+        boolean diagonal;
         Direction dir;
         Location loc;
+        Location closestAllyWounded;
+        int distanceToAlly;
 
-        public MicroInfo(Direction dir, int allies, int enemies) {
+        public MicroInfo(Direction dir, int allies, int enemies, Location closestAllyWounded, int distanceToAlly) {
             this.dir = dir;
             this.allies = allies;
             this.enemies = enemies;
+            this.closestAllyWounded = closestAllyWounded;
+            this.distanceToAlly = distanceToAlly;
             loc = manager.myLocation.add(dir);
             numEnemies = 0;
             numAnts = 0;
@@ -236,6 +259,7 @@ public class Pathfinder {
             minDistToSoldier = 1000000;
             minDistToSpiderAnt = 1000000;
             minDistToBeetle = 1000000;
+            minDistToWoundedAlly = 1000000;
             moveAndKill = false;
             diagonal = false;
             obstructed = true;
@@ -301,7 +325,12 @@ public class Pathfinder {
                 if (micro.obstructed) return false;
                 return minDistToSoldier > micro.minDistToSoldier;
             }
-            if (manager.myType == UnitType.QUEEN) return minDistToEnemy > micro.minDistToEnemy;
+            if (manager.myType == UnitType.QUEEN) {
+                if (closestAllyWounded != null) {
+                    if (distanceToAlly > 5) return loc.distanceSquared(closestAllyWounded) < micro.loc.distanceSquared(closestAllyWounded);
+                }
+                return minDistToEnemy > micro.minDistToEnemy;
+            }
             if (manager.myType == UnitType.BEE) {
                 if (minDistToSpiderAnt != 1000000) {
                     if (minDistToSpiderAnt <= UnitType.BEE.attackRangeSquared && micro.minDistToSpiderAnt > UnitType.BEE.attackRangeSquared) return true;
