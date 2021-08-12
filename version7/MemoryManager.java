@@ -183,6 +183,7 @@ public class MemoryManager {
                 idleFoodHealth = 0;
             } else {
                 for (FoodInfo foodUnit : food) {
+                    if (uc.getEnergyUsed() > 11000) break;
                     if (foodUnit.food == foodUnit.initialFood && idleFoodHealth < foodUnit.food) {
                         idleFoodHealth = foodUnit.food;
                         xLoc = foodUnit.location.x;
@@ -210,6 +211,7 @@ public class MemoryManager {
                 idleFoodHealthNotObs = 0;
             } else {
                 for (FoodInfo foodUnit : food) {
+                    if (uc.getEnergyUsed() > 11000) break;
                     if (!isObstructed(foodUnit.location) && foodUnit.food == foodUnit.initialFood && idleFoodHealthNotObs < foodUnit.food) {
                         idleFoodHealthNotObs = foodUnit.food;
                         xLocNotObs = foodUnit.location.x;
@@ -557,28 +559,17 @@ public class MemoryManager {
         int maxFood = 0;
         int foodCount = 0;
 
-        if (food.length < 60) {
-            for (FoodInfo foodUnit : food) {
-                if (!myLocation.isEqual(foodUnit.location)) {
-                    if (!isObstructed(foodUnit.location)) {
-                        foodHealth += foodUnit.food;
-                        maxFood += foodUnit.initialFood;
-                        foodCount++;
-                        if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food) {
-                            bestFood = foodUnit.location;
-                            bestFoodHealth = foodUnit.food;
-                        }
+        for (FoodInfo foodUnit : food) {
+            if (!myLocation.isEqual(foodUnit.location)) {
+                if (uc.getEnergyUsed() > 11000) break;
+                if (!isObstructed(foodUnit.location)) {
+                    foodHealth += foodUnit.food;
+                    maxFood += foodUnit.initialFood;
+                    foodCount++;
+                    if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food) {
+                        bestFood = foodUnit.location;
+                        bestFoodHealth = foodUnit.food;
                     }
-                }
-            }
-        } else {
-            for (FoodInfo foodUnit : food) {
-                foodHealth += foodUnit.food;
-                maxFood += foodUnit.initialFood;
-                foodCount++;
-                if (foodUnit.food == foodUnit.initialFood && bestFoodHealth < foodUnit.food && !myLocation.isEqual(foodUnit.location)) {
-                    bestFood = foodUnit.location;
-                    bestFoodHealth = foodUnit.food;
                 }
             }
         }
@@ -747,7 +738,7 @@ public class MemoryManager {
 
     public Location closestAllyQueen() {
         Location[] allyQueens = uc.getMyQueensLocation();
-        if (allyQueens.length == 0) {
+        if (myLocation.isEqual(allyQueens[0])) {
             return null;
         }
         int smallestDistance = 1000000;

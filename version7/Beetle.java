@@ -46,8 +46,6 @@ public class Beetle {
         if (!moved) {
             if (uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) && distance > 5 && (allies < enemies || manager.getTotalTroops() < 20)) {
                 manager.path.moveTo(myQueen);
-            } else if (manager.enemies.length != 0 && !manager.allObstructed()) {
-                manager.path.evalLocation(allies, enemies);
             } else {
                 manager.path.moveTo(targetQueen);
             }

@@ -45,7 +45,7 @@ public class Ant {
         int maxAmount = 0;
 
         for (FoodInfo food : manager.food) {
-            if (food.food > maxAmount && !manager.isObstructed(food.location)) {
+            if ((food.food > maxAmount + 25 || maxAmount == 0) && !manager.isObstructed(food.location)) {
                 maxAmount = food.food;
                 bestFood = food;
             }

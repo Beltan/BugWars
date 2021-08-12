@@ -139,62 +139,6 @@ public class Queen {
         }
     }
 
-    private void evalLocation() {
-        Direction bestDirection = manager.dirs[8];
-        int bestValue = -100000;
-        int enemies = 0;
-        int allies = 0;
-        if (manager.units != null) {
-            allies = manager.units.length;
-        }
-
-        for (UnitInfo enemy : manager.enemies) {
-            UnitType enemyType = enemy.getType();
-            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT) {
-                enemies++;
-            }
-        }
-
-        for (int i = 0; i < manager.dirs.length; i++) {
-            Location newLoc = manager.myLocation.add(manager.dirs[i]);
-            if (uc.canMove(manager.dirs[i]) || manager.myLocation.isEqual(newLoc)) {
-                int value = 0;
-                for (int j = 0; j < manager.enemies.length; j++) {
-                    Location target = manager.enemies[j].getLocation();
-                    if (!manager.isObstructed(target)) {
-                        int distance = newLoc.distanceSquared(target);
-                        int health = uc.getInfo().getHealth();
-                        if ((enemies <= allies) && ((health > 200 && enemies < 5) || (health > 150 && enemies < 4) || (health > 100 && enemies < 3) || (health > 50 && enemies < 2))) {
-                            if (distance < 3) {
-                                value -= 100;
-                            }
-                        } else {
-                            value += distance;
-                        }
-                    }
-                }
-
-                if (value >= bestValue) {
-                    bestDirection = manager.dirs[i];
-                    bestValue = value;
-                }
-            }
-        }
-
-        if (bestValue != -100000 && uc.canMove(bestDirection)) {
-            uc.move(bestDirection);
-        }
-
-        for (int i = 0; i < uc.getMyQueensLocation().length; i++) {
-            if (uc.read(manager.INITIAL_QUEEN_INFO + i * 4) == 2) {
-                continue;
-            }
-            uc.write(manager.INITIAL_QUEEN_INFO + 2 + i * 4, allies);
-            uc.write(manager.INITIAL_QUEEN_INFO + 3 + i * 4, enemies);
-            uc.write(manager.INITIAL_QUEEN_INFO + i * 4, 2);
-        }
-    }
-
     private void tryHeal() {
         if (manager.units.length != 0) {
             int lowestHealth = 1000;

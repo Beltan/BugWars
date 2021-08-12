@@ -14,7 +14,7 @@ public class Pathfinder {
 
     final int INF = 1000000;
 
-    boolean rotateRight = true; // Should rotate right or left
+    boolean rotateRight = Math.random() > 0.5; // Should rotate right or left
     Location lastObstacleFound = null; // Latest obstacle found
     int minDistToEnemy = INF; // Minimum distance while going around an obstacle
     Location prevTarget = null; // Previous target
@@ -172,30 +172,20 @@ public class Pathfinder {
     public boolean evalLocation(int allies, int enemies) {
         if (!uc.canMove()) return false;
 
-        Location closestAllyWounded = null;
-        int dist = 1000000;
+        MicroInfo[] microInfo = new MicroInfo[9];
+        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies);
+
         if (manager.myType == UnitType.QUEEN) {
             for (UnitInfo ally : manager.units) {
-                UnitType allyType = ally.getType();
-                if (ally.getHealth() < manager.unitHealth(allyType)) {
-                    Location allyLoc = ally.getLocation();
-                    if (!uc.isObstructed(manager.myLocation, allyLoc)) {
-                        int currentDistance = manager.myLocation.distanceSquared(allyLoc);
-                        if (dist > currentDistance) {
-                            dist = currentDistance;
-                            closestAllyWounded = allyLoc;
-                        }
-                    }
+                for (int i = 0; i < 9; i++) {
+                    if (uc.canMove(manager.dirs[i])) microInfo[i].updateAlly(ally);
                 }
             }
         }
 
-        MicroInfo[] microInfo = new MicroInfo[9];
-        for (int i = 0; i < 9; i++) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies, closestAllyWounded, dist);
-
         for (UnitInfo enemy : manager.enemies) {
             for (int i = 0; i < 9; i++) {
-                microInfo[i].update(enemy);
+                if (uc.canMove(manager.dirs[i])) microInfo[i].update(enemy);
             }
         }
 
@@ -239,15 +229,11 @@ public class Pathfinder {
         boolean diagonal;
         Direction dir;
         Location loc;
-        Location closestAllyWounded;
-        int distanceToAlly;
 
-        public MicroInfo(Direction dir, int allies, int enemies, Location closestAllyWounded, int distanceToAlly) {
+        public MicroInfo(Direction dir, int allies, int enemies) {
             this.dir = dir;
             this.allies = allies;
             this.enemies = enemies;
-            this.closestAllyWounded = closestAllyWounded;
-            this.distanceToAlly = distanceToAlly;
             loc = manager.myLocation.add(dir);
             numEnemies = 0;
             numAnts = 0;
@@ -265,11 +251,21 @@ public class Pathfinder {
             obstructed = true;
         }
 
+        void updateAlly(UnitInfo unit) {
+            Location unitLoc = unit.getLocation();
+            if (uc.isObstructed(loc, unitLoc)) return;
+            int hp = unit.getHealth();
+            if (hp < manager.unitHealth(unit.getType())) {
+                int distance = loc.distanceSquared(unitLoc);
+                if (distance < minDistToWoundedAlly) minDistToWoundedAlly = distance;
+            }
+        }
+
         void update(UnitInfo unit) {
             UnitType type = unit.getType();
             boolean currentObstructed = uc.isObstructed(loc, unit.getLocation());
-            if (obstructed) obstructed = currentObstructed;
             if (!currentObstructed) {
+                obstructed = false;
                 if (dir == Direction.NORTHEAST || dir == Direction.NORTHWEST || dir == Direction.SOUTHEAST || dir == Direction.SOUTHWEST) diagonal = true;
                 int distance = unit.getLocation().distanceSquared(loc);
                 if (type == UnitType.ANT) {
@@ -326,9 +322,14 @@ public class Pathfinder {
                 return minDistToSoldier > micro.minDistToSoldier;
             }
             if (manager.myType == UnitType.QUEEN) {
-                if (closestAllyWounded != null) {
-                    if (distanceToAlly > 5) return loc.distanceSquared(closestAllyWounded) < micro.loc.distanceSquared(closestAllyWounded);
+                if (minDistToWoundedAlly != 1000000) {
+                    if (softAttacks <= 1 && micro.softAttacks <= 1) {
+                        if (minDistToWoundedAlly <= 5 && micro.minDistToWoundedAlly > 5) return true;
+                        if (minDistToWoundedAlly > 5 && micro.minDistToWoundedAlly <= 5) return false;
+                        return minDistToWoundedAlly < micro.minDistToWoundedAlly;
+                    }
                 }
+                if (minDistToBeetle != 1000000) return minDistToBeetle > micro.minDistToBeetle;
                 return minDistToEnemy > micro.minDistToEnemy;
             }
             if (manager.myType == UnitType.BEE) {
