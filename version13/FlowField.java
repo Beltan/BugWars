@@ -203,12 +203,12 @@ public class FlowField {
             }
 
             for (int dx = -1; dx <= 1; dx++) {
+                if (rx + dx < 0 || rx + dx >= width) continue;
                 int nx = (cx + dx + SIZE) % SIZE;
-                if ((nx - xLow + SIZE) % SIZE >= width) continue;
                 for (int dy = -1; dy <= 1; dy++) {
                     if (dx == 0 && dy == 0) continue;
+                    if (ry + dy < 0 || ry + dy >= height) continue;
                     int ny = (cy + dy + SIZE) % SIZE;
-                    if ((ny - yLow + SIZE) % SIZE >= height) continue;
                     int neighbor = nx * SIZE + ny;
                     if (map.isRock(neighbor)) continue;
                     int next = distance + (dx != 0 && dy != 0 ? DIAGONAL_COST : STRAIGHT_COST);

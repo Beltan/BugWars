@@ -15,10 +15,10 @@ public class Ant {
     }
 
     public void play() {
-        tryAttack();
+        manager.attacker.tryAttack(false, manager.INF);
         tryHarvest();
         tryMove();
-        tryAttack();
+        manager.attacker.tryAttack(false, manager.INF);
         tryHarvest();
     }
 
@@ -28,9 +28,6 @@ public class Ant {
             manager.postMoveUpdate();
             return;
         }
-
-        int enemies = manager.countVisibleSoldiers(manager.enemies, manager.INF);
-        int allies = 1 + manager.countVisibleSoldiers(manager.units, 2 * enemies);
 
         Location foodLoc = manager.getIdleFoodLocation();
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
@@ -46,7 +43,7 @@ public class Ant {
             }
         }
 
-        if (enemies != 0 && bestFood != null) {
+        if (bestFood != null && manager.countVisibleSoldiers(manager.enemies, 1) != 0) {
             Pathfinder path = manager.path;
             if (me.distanceSquared(bestFood.location) <= GameConstants.ANT_MINING_RANGE_SQUARED && !path.threatenedNextTurn(me)) {
                 manager.postMoveUpdate();
@@ -60,11 +57,8 @@ public class Ant {
             }
         }
 
-        boolean moved;
-        moved = manager.path.evalLocation(allies, enemies);
-
-        if (!moved) {
-            if (manager.food.length != 0 && bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
+        if (!manager.path.evalLocation()) {
+            if (bestFood != null && bestFood.food > 1 && !manager.myLocation.isEqual(bestFood.location)) {
                 manager.path.evalFoodLocation(bestFood.location);
             } else if (manager.isSet(foodLocNotObs)) {
                 manager.path.moveTo(foodLocNotObs);
@@ -102,53 +96,6 @@ public class Ant {
 
             if (maxAmount != 0) {
                 uc.mine(bestFood);
-            }
-        }
-    }
-
-    private void tryAttack() {
-        if (!uc.canAttack() || (manager.enemies.length == 0 && manager.rocks.length == 0)) {
-            return;
-        }
-
-        UnitInfo queenTarget = manager.endgameQueenTarget();
-        if (queenTarget != null) {
-            uc.attack(queenTarget);
-            return;
-        }
-
-        if (manager.enemies.length != 0) {
-            int smallestHealth = manager.INF;
-            int health;
-            UnitInfo lowestEnemy = manager.enemies[0];
-
-            for (UnitInfo enemy : manager.enemies) {
-                health = enemy.getHealth();
-                if (uc.canAttack(enemy) && health < smallestHealth) {
-                    smallestHealth = health;
-                    lowestEnemy = enemy;
-                }
-            }
-
-            if (smallestHealth != manager.INF) {
-                uc.attack(lowestEnemy);
-                manager.tracker.onAttack(lowestEnemy);
-            }
-        } else if (manager.rocks.length != 0) {
-            int smallestRock = manager.INF;
-            int durability;
-            RockInfo weakerRock = manager.rocks[0];
-
-            for (RockInfo rock : manager.rocks) {
-                durability = rock.getDurability();
-                if (uc.canAttack(rock) && durability < smallestRock) {
-                    smallestRock = durability;
-                    weakerRock = rock;
-                }
-            }
-
-            if (smallestRock != manager.INF) {
-                uc.attack(weakerRock);
             }
         }
     }

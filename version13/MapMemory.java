@@ -28,22 +28,36 @@ public class MapMemory {
     public final int SYMMETRY_MIRROR_Y = 2;
     public final int SYMMETRY_ROTATION = 4;
 
-    public int SYMMETRY = 49;
-    private int ROCK_LIST_SIZE = 67;
-    private int ROCK_CHECK_INDEX = 68;
+    public final int SYMMETRY = 49;
+    private final int ROCK_LIST_SIZE = 67;
+    private final int ROCK_CHECK_INDEX = 68;
     public final int ROCK_BASE = 1000;
-    private int ROCK_LIST_BASE = 36400;
+    private final int ROCK_LIST_BASE = 36400;
     // Last round + 1 any unit stood in each region, 0 if never
-    private int REGION_BASE = 8000;
-    private int FOOD_TARGET_X = 290;
-    private int FOOD_TARGET_Y = 291;
-    private int BREACH_X = 8310;
-    private int BREACH_Y = 8311;
-    private int BREACH_SET = 8312;
-    private int EXPLORE_X = 8300;
-    private int EXPLORE_Y = 8301;
-    private int EXPLORE_PICK_ROUND = 8302;
-    private int EXPLORE_DEADLINE = 8303;
+    private final int REGION_BASE = 8000;
+    private final int FOOD_TARGET_X = 290;
+    private final int FOOD_TARGET_Y = 291;
+    private final int BREACH_X = 8310;
+    private final int BREACH_Y = 8311;
+    private final int BREACH_SET = 8312;
+    private final int EXPLORE_X = 8300;
+    private final int EXPLORE_Y = 8301;
+    private final int EXPLORE_PICK_ROUND = 8302;
+    private final int EXPLORE_DEADLINE = 8303;
+
+    // Each field needs 11 state slots, two buffers of SIZE * SIZE cells and a queue of SIZE * SIZE cells
+    private final int ENEMY_FIELD_STATE = 50;
+    private final int ENEMY_FIELD_BUFFERS = 10000;
+    private final int ENEMY_FIELD_QUEUE = 30000;
+    private final int ENEMY_FIELD_ROCKS = 292;
+    private final int HOME_FIELD_STATE = 70;
+    private final int HOME_FIELD_BUFFERS = 70000;
+    private final int HOME_FIELD_QUEUE = 83000;
+    private final int HOME_FIELD_ROCKS = 293;
+    private final int FOOD_FIELD_STATE = 270;
+    private final int FOOD_FIELD_BUFFERS = 57000;
+    private final int FOOD_FIELD_QUEUE = 23000;
+    private final int FOOD_FIELD_ROCKS = 294;
 
     public FlowField enemyField;
     public FlowField homeField;
@@ -62,9 +76,9 @@ public class MapMemory {
     public MapMemory(MemoryManager manager) {
         this.manager = manager;
         uc = manager.uc;
-        enemyField = new FlowField(manager, this, 50, 10000, 30000, true, 292);
-        homeField = new FlowField(manager, this, 70, 70000, 83000, false, 293);
-        foodField = new FlowField(manager, this, 270, 57000, 23000, false, 294, FOOD_TARGET_X);
+        enemyField = new FlowField(manager, this, ENEMY_FIELD_STATE, ENEMY_FIELD_BUFFERS, ENEMY_FIELD_QUEUE, true, ENEMY_FIELD_ROCKS);
+        homeField = new FlowField(manager, this, HOME_FIELD_STATE, HOME_FIELD_BUFFERS, HOME_FIELD_QUEUE, false, HOME_FIELD_ROCKS);
+        foodField = new FlowField(manager, this, FOOD_FIELD_STATE, FOOD_FIELD_BUFFERS, FOOD_FIELD_QUEUE, false, FOOD_FIELD_ROCKS, FOOD_TARGET_X);
     }
 
     public int cell(int x, int y) {
@@ -197,10 +211,6 @@ public class MapMemory {
         uc.write(FOOD_TARGET_X, target.x);
         uc.write(FOOD_TARGET_Y, target.y);
         foodField.invalidate();
-    }
-
-    public boolean isFoodTarget(Location target) {
-        return uc.read(FOOD_TARGET_X) == target.x && uc.read(FOOD_TARGET_Y) == target.y;
     }
 
     private int region(Location loc) {

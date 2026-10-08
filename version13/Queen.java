@@ -10,7 +10,6 @@ public class Queen {
     private boolean scanned;
     private int unreachableNext = 0;
 
-    private final int MAX_FILTERED_UNITS = 10;
     private final int SURPLUS_RESOURCES = 400;
     private final int UNREACHABLE_MEMORY = 4;
     // Walled food opens up once rocks break, so it is retried after a while
@@ -39,31 +38,11 @@ public class Queen {
         scanned = true;
         Location start = manager.myLocation;
 
-        int enemies = 0;
-        int allies = 0;
-
-        if (manager.units.length < MAX_FILTERED_UNITS) {
-            for (UnitInfo ally : manager.units) {
-                UnitType allyType = ally.getType();
-                if (allyType != UnitType.QUEEN && allyType != UnitType.ANT && !manager.isObstructed(ally.getLocation())) {
-                    allies++;
-                }
-            }
-        } else {
-            allies = manager.units.length;
-        }
-        for (UnitInfo enemy : manager.enemies) {
-            UnitType enemyType = enemy.getType();
-            if (enemyType != UnitType.QUEEN && enemyType != UnitType.ANT && !manager.isObstructed(enemy.getLocation())) {
-                enemies++;
-            }
-        }
-
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
         Location foodLoc = manager.getIdleFoodLocation();
         boolean leaveForFood = manager.foodCount == 0 || !manager.localFoodHasRoom() || manager.antsBlockedByDanger();
         if (manager.enemies.length != 0 && !manager.allObstructed()) {
-            manager.path.evalLocation(allies, enemies);
+            manager.path.evalLocation();
         } else if (manager.bestFood != null && isFar(manager.bestFood) && !leaveForFood) {
             manager.path.moveToQueen(manager.bestFood);
         } else if (leaveForFood && manager.isSet(foodLocNotObs) && isFar(foodLocNotObs) && goToFood(foodLocNotObs)) {
@@ -173,15 +152,17 @@ public class Queen {
         return true;
     }
 
-    // Soldiers before ants, then lowest health
+    // Soldiers before ants, then allies whose extra point survives another beetle hit, then lowest health
     private void tryHeal() {
         if (!uc.canHeal()) return;
         UnitInfo bestTarget = null;
         int bestScore = manager.INF;
+        int beetleHit = (int) UnitType.BEETLE.getAttack();
         for (UnitInfo ally : uc.senseUnits(GameConstants.QUEEN_HEALING_RANGE, manager.allies)) {
             int health = ally.getHealth();
-            if (health == manager.unitHealth(ally.getType())) continue;
-            int score = ally.getType() == UnitType.ANT ? health + GameConstants.QUEEN_MAX_HEALTH : health;
+            if (health == ally.getType().maxHealth) continue;
+            int score = health % beetleHit == 0 ? health : health + GameConstants.QUEEN_MAX_HEALTH;
+            if (ally.getType() == UnitType.ANT) score += 2 * GameConstants.QUEEN_MAX_HEALTH;
             if (score < bestScore && uc.canHeal(ally)) {
                 bestScore = score;
                 bestTarget = ally;

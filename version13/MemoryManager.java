@@ -16,18 +16,20 @@ public class MemoryManager {
     public UnitInfo[] units;
     public UnitInfo[] enemies;
     public FoodInfo[] food;
-    public UnitInfo[] cocoon;
     public Location bestFood;
     public int bestFoodHealth;
     public int foodCount;
     public int foodHealthSum;
     public int maxFoodSum;
+    private int localAnts;
+    private int localAntCocoons;
     public UnitType objective;
     private boolean edgesKnown = false;
     public RockInfo[] rocks;
     public Pathfinder path;
     public MapMemory map;
     public EnemyTracker tracker;
+    public Attacker attacker;
     public int myId;
     public int enemyBeetles;
     public int enemySpiders;
@@ -60,67 +62,72 @@ public class MemoryManager {
     // After the opening, ants are allowed while soldiers outnumber ants by this ratio
     public final double ANT_TROOP_RATIO = 1.0;
     public final int ENDGAME_ROUNDS = 150;
+    // More troops than this make contested food safe for ants
+    public final int ESCORT_TROOPS = 5;
+    // Below this many troops a queen near the enemy keeps building beetles
+    public final int GUARD_TROOPS = 11;
+    public final int ANT_FREE_TROOPS = 40;
+    // While food is above 1 / FOOD_FULLNESS[i] of its initial amount, each ant claims ANT_FOOD_SHARE[i] food tiles
+    public final double[] FOOD_FULLNESS = {1.5, 1.3, 1.15, 1.1};
+    public final double[] ANT_FOOD_SHARE = {2.9, 2.4, 1.9, 1.5};
+    public final int COCOON_ANT_WEIGHT = 4;
 
     // 0 to 99 are general information and states
-    public int PREVIOUS_ROUND = 0;
-    public int CURRENT_MAP_SIZE = 2;
-    public int FINAL_MAP_SIZE = 3;
-    public int TEN_XCOORDINATE_CENTER = 4;
-    public int TEN_YCOORDINATE_CENTER = 5;
-    public int XHIGHER_BOUND = 6;
-    public int XLOWER_BOUND = 7;
-    public int YHIGHER_BOUND = 8;
-    public int YLOWER_BOUND = 9;
-    public int XHIGHER_FINAL = 10;
-    public int XLOWER_FINAL = 11;
-    public int YHIGHER_FINAL = 12;
-    public int YLOWER_FINAL = 13;
-    public int ANTS_PREVIOUS = 14;
-    public int ANTS_CURRENT = 15;
-    public int ANTS_COCOON = 16;
-    public int BEES_PREVIOUS = 17;
-    public int BEES_CURRENT = 18;
-    public int BEES_COCOON = 19;
-    public int BEETLES_PREVIOUS = 20;
-    public int BEETLES_CURRENT = 21;
-    public int BEETLES_COCOON = 22;
-    public int SPIDERS_PREVIOUS = 23;
-    public int SPIDERS_CURRENT = 24;
-    public int SPIDERS_COCOON = 25;
-    public int XIDLE_FOOD = 26;
-    public int YIDLE_FOOD = 27;
-    public int IDLE_FOOD_HEALTH = 28;
-    public int ENEMY_SPOTTED = 29;
-    public int ENEMY_SEEN_LAST_ROUND = 30;
-    public int SPAWN_SOLDIERS_ROUND = 31;
-    public int XQUEEN_ALLOWED_SOLDIER = 32;
-    public int YQUEEN_ALLOWED_SOLDIER = 33;
-    public int XIDLE_FOOD_OBS = 34;
-    public int YIDLE_FOOD_OBS = 35;
-    public int IDLE_FOOD_HEALTH_OBS = 36;
-    public int PASSIVE = 39;
-    public int PASSIVE_COUNTER = 40;
-    public int QUEEN_SEES_ENEMY = 41;
-    public int QUEEN_SEES_ENEMY_CURRENT = 42;
-    public int ENEMY_QUEEN_COUNT = 43;
-    public int ENEMY_QUEENS_MOVED = 44;
-    public int XBEACON = 46;
-    public int YBEACON = 47;
-    public int BEACON_ROUND = 48;
-    public int XROOM = 37;
-    public int YROOM = 38;
-    public int ROOM_ROUND = 45;
+    public final int PREVIOUS_ROUND = 0;
+    public final int MAP_SIZE_KNOWN = 3;
+    public final int TEN_XCOORDINATE_CENTER = 4;
+    public final int TEN_YCOORDINATE_CENTER = 5;
+    public final int XHIGHER_BOUND = 6;
+    public final int XLOWER_BOUND = 7;
+    public final int YHIGHER_BOUND = 8;
+    public final int YLOWER_BOUND = 9;
+    public final int XHIGHER_FINAL = 10;
+    public final int XLOWER_FINAL = 11;
+    public final int YHIGHER_FINAL = 12;
+    public final int YLOWER_FINAL = 13;
+    public final int ANTS_PREVIOUS = 14;
+    public final int ANTS_CURRENT = 15;
+    public final int ANTS_COCOON = 16;
+    public final int BEES_PREVIOUS = 17;
+    public final int BEES_CURRENT = 18;
+    public final int BEES_COCOON = 19;
+    public final int BEETLES_PREVIOUS = 20;
+    public final int BEETLES_CURRENT = 21;
+    public final int BEETLES_COCOON = 22;
+    public final int SPIDERS_PREVIOUS = 23;
+    public final int SPIDERS_CURRENT = 24;
+    public final int SPIDERS_COCOON = 25;
+    public final int XIDLE_FOOD = 26;
+    public final int YIDLE_FOOD = 27;
+    public final int IDLE_FOOD_HEALTH = 28;
+    public final int ENEMY_SEEN_LAST_ROUND = 30;
+    public final int SPAWN_SOLDIERS_ROUND = 31;
+    public final int XQUEEN_ALLOWED_SOLDIER = 32;
+    public final int YQUEEN_ALLOWED_SOLDIER = 33;
+    public final int XIDLE_FOOD_OBS = 34;
+    public final int YIDLE_FOOD_OBS = 35;
+    public final int IDLE_FOOD_HEALTH_OBS = 36;
+    public final int PASSIVE = 39;
+    public final int PASSIVE_COUNTER = 40;
+    public final int ENEMY_QUEEN_COUNT = 43;
+    public final int ENEMY_QUEENS_MOVED = 44;
+    public final int XBEACON = 46;
+    public final int YBEACON = 47;
+    public final int BEACON_ROUND = 48;
+    public final int XROOM = 37;
+    public final int YROOM = 38;
+    public final int ROOM_ROUND = 45;
 
     // 100 to 129 are cocoon IDs, 200 to 229 their hatching round and 230 to 259 their counter slot
-    public int INITIAL_COCOON_LIST = 100;
-    public int FINAL_COCOON_LIST = 129;
-    public int COCOON_HATCH_ROUND_OFFSET = 100;
-    public int COCOON_COUNTER_OFFSET = 130;
+    public final int INITIAL_COCOON_LIST = 100;
+    public final int FINAL_COCOON_LIST = 129;
+    public final int COCOON_HATCH_ROUND_OFFSET = 100;
+    public final int COCOON_COUNTER_OFFSET = 130;
 
     // 160 to 169 are previous enemy Queen positions
-    public int PREVIOUS_ENEMY_QUEENS = 160;
-    public int OUR_STARTS = 300;
-    public int ENEMY_STARTS = 306;
+    public final int PREVIOUS_ENEMY_QUEENS = 160;
+    public final int OUR_STARTS = 300;
+    public final int ENEMY_STARTS = 306;
 
     public MemoryManager(UnitController uc) {
         this.uc = uc;
@@ -136,12 +143,12 @@ public class MemoryManager {
         food = uc.senseFood();
         bestFood = null;
         bestFoodHealth = 0;
-        cocoon = new UnitInfo[10];
         objective = UnitType.ANT;
         rocks = uc.senseObstacles();
         path = new Pathfinder(this);
         map = new MapMemory(this);
         tracker = new EnemyTracker(this);
+        attacker = new Attacker(this);
         myId = uc.getInfo().getID();
     }
 
@@ -174,9 +181,7 @@ public class MemoryManager {
         }
 
         mapLimits();
-        if (uc.read(FINAL_MAP_SIZE) == 0) {
-            mapSizeUpdate();
-        }
+        if (uc.read(MAP_SIZE_KNOWN) == 0) updateBounds();
 
         if (myType == UnitType.ANT) {
             uc.write(ANTS_CURRENT, uc.read(ANTS_CURRENT) + 1);
@@ -255,7 +260,6 @@ public class MemoryManager {
             }
         }
         if (sighting != null) {
-            uc.write(ENEMY_SPOTTED, 1);
             if (myType == UnitType.QUEEN || uc.read(BEACON_ROUND) != round + 1) {
                 uc.write(XBEACON, sighting.x);
                 uc.write(YBEACON, sighting.y);
@@ -272,12 +276,7 @@ public class MemoryManager {
             uc.write(ENEMY_SEEN_LAST_ROUND, 1);
         }
 
-        if (myType == UnitType.QUEEN) {
-            if (enemies.length != 0 && !allObstructed()) {
-                uc.write(QUEEN_SEES_ENEMY_CURRENT, 1);
-            }
-            updateObjective();
-        }
+        if (myType == UnitType.QUEEN) updateObjective();
     }
 
     private boolean isIdleFoodTaken(Location foodLocation) {
@@ -312,9 +311,6 @@ public class MemoryManager {
         soldierRoundSpawn();
 
         uc.write(ENEMY_SEEN_LAST_ROUND, 0);
-
-        uc.write(QUEEN_SEES_ENEMY, uc.read(QUEEN_SEES_ENEMY_CURRENT));
-        uc.write(QUEEN_SEES_ENEMY_CURRENT, 0);
 
         Location[] enemyQueens = uc.getEnemyQueensLocation();
         boolean moved = false;
@@ -451,7 +447,7 @@ public class MemoryManager {
     // The opposite edge is the mirror image when the axis is symmetric
     private void findMapEdge(int dx, int dy, int slot, int oppositeSlot, int centerSlot) {
         if (uc.read(slot) != 0) return;
-        int range = unitRange();
+        int range = (int) Math.sqrt(myType.sightRangeSquared);
         if (!uc.isOutOfMap(new Location(myLocation.x + dx * range, myLocation.y + dy * range))) return;
 
         for (int i = 1; i <= range; i++) {
@@ -466,102 +462,33 @@ public class MemoryManager {
         }
     }
 
-    public void mapSizeUpdate() {
+    // The explored bounds only matter until one axis has its center and an edge
+    private void updateBounds() {
         int xCenter = uc.read(TEN_XCOORDINATE_CENTER);
         int yCenter = uc.read(TEN_YCOORDINATE_CENTER);
-        int xLowFinal = uc.read(XLOWER_FINAL);
-        int yLowFinal = uc.read(YLOWER_FINAL);
-        int xHighFinal = uc.read(XHIGHER_FINAL);
-        int yHighFinal = uc.read(YHIGHER_FINAL);
-
-        double coordinate;
-        if (xCenter != 0 && (xLowFinal != 0 || xHighFinal != 0)) {
-            coordinate = 2 * Math.abs((xCenter / 10.0) - Math.max(xLowFinal, xHighFinal)) + 1;
-            uc.write(FINAL_MAP_SIZE, (int) coordinate);
-        } else if (yCenter != 0 && (yLowFinal != 0 || yHighFinal != 0)) {
-            coordinate = 2 * Math.abs((yCenter / 10.0) - Math.max(yLowFinal, yHighFinal)) + 1;
-            uc.write(FINAL_MAP_SIZE, (int) coordinate);
-        } else {
-            int xLow = uc.read(XLOWER_BOUND);
-            int yLow = uc.read(YLOWER_BOUND);
-            int xHigh = uc.read(XHIGHER_BOUND);
-            int yHigh = uc.read(YHIGHER_BOUND);
-
-            if (myLocation.x > xHigh) {
-                xHigh = myLocation.x;
-                uc.write(XHIGHER_BOUND, xHigh);
-            }
-            if (myLocation.y > yHigh) {
-                yHigh = myLocation.y;
-                uc.write(YHIGHER_BOUND, yHigh);
-            }
-            if (myLocation.x < xLow) {
-                xLow = myLocation.x;
-                uc.write(XLOWER_BOUND, xLow);
-            }
-            if (myLocation.y < yLow) {
-                yLow = myLocation.y;
-                uc.write(YLOWER_BOUND, yLow);
-            }
-
-            uc.write(CURRENT_MAP_SIZE, Math.max(xHigh - xLow, yHigh - yLow));
+        if ((xCenter != 0 && (uc.read(XLOWER_FINAL) != 0 || uc.read(XHIGHER_FINAL) != 0))
+                || (yCenter != 0 && (uc.read(YLOWER_FINAL) != 0 || uc.read(YHIGHER_FINAL) != 0))) {
+            uc.write(MAP_SIZE_KNOWN, 1);
+            return;
         }
+        if (myLocation.x > uc.read(XHIGHER_BOUND)) uc.write(XHIGHER_BOUND, myLocation.x);
+        if (myLocation.y > uc.read(YHIGHER_BOUND)) uc.write(YHIGHER_BOUND, myLocation.y);
+        if (myLocation.x < uc.read(XLOWER_BOUND)) uc.write(XLOWER_BOUND, myLocation.x);
+        if (myLocation.y < uc.read(YLOWER_BOUND)) uc.write(YLOWER_BOUND, myLocation.y);
     }
 
-    private int unitRange() {
-        int range = 0;
-
-        if (myType == UnitType.QUEEN) {
-            range = (int) Math.sqrt(GameConstants.QUEEN_SIGHT_RANGE_SQUARED);
-        } else if (myType == UnitType.ANT) {
-            range = (int) Math.sqrt(GameConstants.ANT_SIGHT_RANGE_SQUARED);
-        } else if (myType == UnitType.BEE) {
-            range = (int) Math.sqrt(GameConstants.BEE_SIGHT_RANGE_SQUARED);
-        } else if (myType == UnitType.BEETLE) {
-            range = (int) Math.sqrt(GameConstants.BEETLE_SIGHT_RANGE_SQUARED);
-        } else if (myType == UnitType.SPIDER) {
-            range = (int) Math.sqrt(GameConstants.SPIDER_SIGHT_RANGE_SQUARED);
-        }
-
-        return range;
-    }
-
-    public int unitHealth(UnitType ally) {
-        int health = 0;
-
-        if (ally == UnitType.QUEEN) {
-            health = GameConstants.QUEEN_MAX_HEALTH;
-        } else if (ally == UnitType.ANT) {
-            health = GameConstants.ANT_MAX_HEALTH;
-        } else if (ally == UnitType.BEE) {
-            health = GameConstants.BEE_MAX_HEALTH;
-        } else if (ally == UnitType.BEETLE) {
-            health = GameConstants.BEETLE_MAX_HEALTH;
-        } else if (ally == UnitType.SPIDER) {
-            health = GameConstants.SPIDER_MAX_HEALTH;
-        }
-
-        return health;
+    public boolean isHurt() {
+        return uc.getInfo().getHealth() * 2 < myType.maxHealth;
     }
 
     public Direction[] shuffle(Direction[] list) {
         Direction[] shuffledList = new Direction[MOVE_DIRECTIONS];
-        int random;
-
-        for (int i = 0; i < MOVE_DIRECTIONS; i++) {
-            random = (int )(Math.random() * MOVE_DIRECTIONS);
-            if (shuffledList[random] == null) {
-                shuffledList[random] = list[i];
-            } else {
-                for (int j = 0; j < MOVE_DIRECTIONS; j++) {
-                    if (shuffledList[(random + j) % MOVE_DIRECTIONS] == null) {
-                        shuffledList[(random + j) % MOVE_DIRECTIONS] = list[i];
-                        break;
-                    }
-                }
-            }
+        for (Direction dir : list) {
+            if (dir == Direction.ZERO) continue;
+            int random = (int) (Math.random() * MOVE_DIRECTIONS);
+            while (shuffledList[random] != null) random = (random + 1) % MOVE_DIRECTIONS;
+            shuffledList[random] = dir;
         }
-
         return shuffledList;
     }
 
@@ -609,46 +536,38 @@ public class MemoryManager {
         return true;
     }
 
-    public boolean canSpawnAnt() {
-        if (bestFood == null) return false;
-
-        int antCount = 0;
-        int cocoonAnts = 0;
+    private void countLocalAnts() {
+        localAnts = 0;
+        localAntCocoons = 0;
         for (UnitInfo unit : units) {
             if (unit.getType() == UnitType.ANT && !isObstructed(unit.getLocation())) {
-                if (unit.isCocoon()) {
-                    cocoonAnts++;
-                    continue;
-                }
-                antCount++;
+                if (unit.isCocoon()) localAntCocoons++;
+                else localAnts++;
             }
         }
-
-        return (antCount + cocoonAnts < MAX_ANTS_PER_QUEEN && (((objective == UnitType.ANT && getSpawnSoldiersRound() > round) ||
-                ((getTotalTroops() > ANT_TROOP_RATIO * getAnts() || getTotalTroops() > 40) && safeForAnts())) &&
-                (myLocation.distanceSquared(closestEnemyQueen()) > QUEEN_DANGER_DISTANCE || getTotalTroops() > 5 || !isContested(bestFood)) &&
-                (foodCount != 1 || foodHealthSum * 2 >= maxFoodSum) && safeForAnts() &&
-                ((foodHealthSum * 1.5 > maxFoodSum && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.3 > maxFoodSum && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.15 > maxFoodSum && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.1 > maxFoodSum && antCount * 1.5 + 4 * cocoonAnts < foodCount))));
     }
 
-    // The food part of canSpawnAnt
+    public boolean canSpawnAnt() {
+        if (bestFood == null) return false;
+        countLocalAnts();
+        int troops = getTotalTroops();
+        return localAnts + localAntCocoons < MAX_ANTS_PER_QUEEN
+                && ((objective == UnitType.ANT && getSpawnSoldiersRound() > round) || troops > ANT_TROOP_RATIO * getAnts() || troops > ANT_FREE_TROOPS)
+                && !antsBlockedByDanger() && safeForAnts() && foodHasRoom();
+    }
+
     public boolean localFoodHasRoom() {
-        int antCount = 0;
-        int cocoonAnts = 0;
-        for (UnitInfo unit : units) {
-            if (unit.getType() == UnitType.ANT && !isObstructed(unit.getLocation())) {
-                if (unit.isCocoon()) cocoonAnts++;
-                else antCount++;
-            }
+        countLocalAnts();
+        return foodHasRoom();
+    }
+
+    // A single tile only takes another ant while at least half full; fuller food takes more ants per tile
+    private boolean foodHasRoom() {
+        if (foodCount == 1 && foodHealthSum * 2 < maxFoodSum) return false;
+        for (int i = 0; i < FOOD_FULLNESS.length; i++) {
+            if (foodHealthSum * FOOD_FULLNESS[i] > maxFoodSum && localAnts * ANT_FOOD_SHARE[i] + COCOON_ANT_WEIGHT * localAntCocoons < foodCount) return true;
         }
-        return (foodCount != 1 || maxFoodSum == foodHealthSum) &&
-                ((foodHealthSum * 1.5 > maxFoodSum && antCount * 2.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.3 > maxFoodSum && antCount * 2.4 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.15 > maxFoodSum && antCount * 1.9 + 4 * cocoonAnts < foodCount) ||
-                (foodHealthSum * 1.1 > maxFoodSum && antCount * 1.5 + 4 * cocoonAnts < foodCount));
+        return false;
     }
 
     // Food not clearly on our side of the map: an unescorted ant there is likely lost
@@ -672,13 +591,13 @@ public class MemoryManager {
     // The danger rule keeps ants away from this food: whoever got here second should look elsewhere
     public boolean antsBlockedByDanger() {
         return bestFood != null && myLocation.distanceSquared(closestEnemyQueen()) <= QUEEN_DANGER_DISTANCE
-                && getTotalTroops() <= 5 && isContested(bestFood);
+                && getTotalTroops() <= ESCORT_TROOPS && isContested(bestFood);
     }
 
     public boolean canSpawnBeetle() {
         return ((((enemyBeetles + enemyBees > allyBeetles) && !allObstructed()) ||
                 (getPassive() == 0 && (getBeetles() * 2 <= getSpiders()))) ||
-                (myLocation.distanceSquared(closestEnemyQueen()) <= QUEEN_DANGER_DISTANCE && getTotalTroops() < 11));
+                (myLocation.distanceSquared(closestEnemyQueen()) <= QUEEN_DANGER_DISTANCE && getTotalTroops() < GUARD_TROOPS));
     }
 
     // Many rocks in sight usually block a spider's shots, but in a maze the corridors still leave lines of fire.
@@ -861,6 +780,12 @@ public class MemoryManager {
         return count;
     }
 
+    // Visible soldiers only, this unit included
+    public boolean isOutnumbered() {
+        int enemySoldiers = countVisibleSoldiers(enemies, INF);
+        return 1 + countVisibleSoldiers(units, enemySoldiers) < enemySoldiers;
+    }
+
     public boolean isThreatened(Location loc) {
         for (UnitInfo enemy : enemies) {
             if (loc.distanceSquared(enemy.getLocation()) <= enemy.getType().getAttackRangeSquared()) return true;
@@ -899,15 +824,6 @@ public class MemoryManager {
         if (myLocation.isEqual(getAllowedSoldier()) || round >= ownRound) {
             objective = UnitType.BEETLE;
         }
-    }
-
-    public boolean isExtreme(Location target) {
-        for (Direction dir : dirs) {
-            if (uc.isOutOfMap(target.add(dir))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     // (0, 0) means no location, maps have positive offsets
@@ -955,52 +871,20 @@ public class MemoryManager {
         food = uc.senseFood();
     }
 
-    public int getFinalMapSize() {
-        return uc.read(FINAL_MAP_SIZE);
-    }
-
-    public int getCurrentMapSize() {
-        return uc.read(CURRENT_MAP_SIZE);
-    }
-
-    public int getQueens() {
-        return uc.getMyQueensLocation().length;
-    }
-
-    public int getEnemyQueens() {
-        return uc.getEnemyQueensLocation().length;
-    }
-
     public int getAnts() {
         return uc.read(ANTS_PREVIOUS);
-    }
-
-    public int getAntsCocoon() {
-        return uc.read(ANTS_COCOON);
     }
 
     public int getBees() {
         return uc.read(BEES_PREVIOUS);
     }
 
-    public int getBeesCocoon() {
-        return uc.read(BEES_COCOON);
-    }
-
     public int getBeetles() {
         return uc.read(BEETLES_PREVIOUS);
     }
 
-    public int getBeetlesCocoon() {
-        return uc.read(BEETLES_COCOON);
-    }
-
     public int getSpiders() {
         return uc.read(SPIDERS_PREVIOUS);
-    }
-
-    public int getSpidersCocoon() {
-        return uc.read(SPIDERS_COCOON);
     }
 
     public int getTotalTroops() {
@@ -1021,10 +905,6 @@ public class MemoryManager {
 
     public int getIdleFoodHealthNotObs() {
         return uc.read(IDLE_FOOD_HEALTH_OBS);
-    }
-
-    public int getEnemySpotted() {
-        return uc.read(ENEMY_SPOTTED);
     }
 
     public int getEnemySeenLastRound() {
@@ -1049,9 +929,5 @@ public class MemoryManager {
 
     public int getPassiveCounter() {
         return uc.read(PASSIVE_COUNTER);
-    }
-
-    public int getQueenSeesEnemy() {
-        return uc.read(QUEEN_SEES_ENEMY);
     }
 }

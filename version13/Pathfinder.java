@@ -33,10 +33,19 @@ public class Pathfinder {
     // Diagonal moves cost about 1.41 times the movement delay of 2
     final int EXPLORE_ROUNDS_PER_TILE = 3;
     final int EXPLORE_MARGIN = 20;
+    // A target that moved farther than this restarts the obstacle following
+    final int TARGET_MOVED_DISTANCE = 9;
+    // Two full turns of 45 degree rotations
+    final int BUG_ROTATIONS = 16;
+    // Rounds the queen waits behind a unit before walking around it
+    final int QUEEN_WAIT_ROUNDS = 12;
+    final int QUEEN_RESET_ROUNDS = 15;
+    // With fewer troops than this a hurt soldier retreats even when not outnumbered
+    final int RETREAT_TROOPS = 20;
 
     boolean rotateRight = Math.random() > 0.5;
     Location lastObstacleFound = null;
-    int minDistToEnemy = INF;
+    int minDistToTarget = INF;
     Location prevTarget = null;
     int standoffRounds = 0;
     boolean readyToAttack;
@@ -93,6 +102,18 @@ public class Pathfinder {
         return target;
     }
 
+    // Hurt soldiers away from the queen go back to heal unless the fight around them is won
+    public void moveToObjectiveOrHome() {
+        if (manager.isHurt() && (manager.getTotalTroops() < RETREAT_TROOPS || manager.isOutnumbered())) {
+            // Waits in heal range until healthy, off the queen's ring where she spawns
+            int distance = manager.myLocation.distanceSquared(manager.closestAllyQueen());
+            if (distance > GameConstants.QUEEN_HEALING_RANGE) moveToHome();
+            else if (distance <= manager.ADJACENT_DISTANCE) moveToObjective();
+        } else {
+            moveToObjective();
+        }
+    }
+
     public void moveToEnemyQueen() {
         if (!uc.canMove()) return;
         Direction dir = manager.map.enemyField.direction();
@@ -117,15 +138,15 @@ public class Pathfinder {
         if (!uc.canMove()) return;
         if (target == null) return;
 
-        if (prevTarget == null || target.distanceSquared(prevTarget) > 9 || manager.myLocation.isEqual(target) || (uc.canSenseLocation(target) && !manager.isObstructed(target))) {
+        if (prevTarget == null || target.distanceSquared(prevTarget) > TARGET_MOVED_DISTANCE || manager.myLocation.isEqual(target) || (uc.canSenseLocation(target) && !manager.isObstructed(target))) {
             resetPathfinding();
         }
 
         int d = manager.myLocation.distanceSquared(target);
-        if (d <= minDistToEnemy) resetPathfinding();
+        if (d <= minDistToTarget) resetPathfinding();
 
         prevTarget = target;
-        minDistToEnemy = Math.min(d, minDistToEnemy);
+        minDistToTarget = Math.min(d, minDistToTarget);
 
         Direction dir = manager.myLocation.directionTo(target);
         if (lastObstacleFound != null) {
@@ -136,7 +157,7 @@ public class Pathfinder {
             }
         }
 
-        for (int i = 0; i < 16; ++i){
+        for (int i = 0; i < BUG_ROTATIONS; ++i){
             if (uc.canMove(dir)){
                 uc.move(dir);
                 break;
@@ -159,7 +180,7 @@ public class Pathfinder {
 
     boolean rotateRightQueen = true;
     Location lastObstacleFoundQueen = null;
-    int minDistToEnemyQueen = INF;
+    int minDistToTargetQueen = INF;
     Location prevTargetQueen = null;
     int counterQueen = 0;
 
@@ -167,15 +188,15 @@ public class Pathfinder {
         if (!uc.canMove()) return;
         if (target == null) return;
 
-        if (prevTargetQueen == null || target.distanceSquared(prevTargetQueen) > 9 || manager.myLocation.isEqual(target) || (uc.canSenseLocation(target) && !manager.isObstructed(target))) {
+        if (prevTargetQueen == null || target.distanceSquared(prevTargetQueen) > TARGET_MOVED_DISTANCE || manager.myLocation.isEqual(target) || (uc.canSenseLocation(target) && !manager.isObstructed(target))) {
             resetPathfindingQueen();
         }
 
         int d = manager.myLocation.distanceSquared(target);
-        if (d <= minDistToEnemyQueen) resetPathfindingQueen();
+        if (d <= minDistToTargetQueen) resetPathfindingQueen();
 
         prevTargetQueen = target;
-        minDistToEnemyQueen = Math.min(d, minDistToEnemyQueen);
+        minDistToTargetQueen = Math.min(d, minDistToTargetQueen);
 
         Direction dir = manager.myLocation.directionTo(target);
         if (lastObstacleFoundQueen != null) {
@@ -186,7 +207,7 @@ public class Pathfinder {
             }
         }
 
-        for (int i = 0; i < 16; ++i){
+        for (int i = 0; i < BUG_ROTATIONS; ++i){
             if (uc.canMove(dir)){
                 uc.move(dir);
                 counterQueen = 0;
@@ -198,17 +219,16 @@ public class Pathfinder {
                 if (rotateRightQueen) dir = dir.rotateRight();
                 else dir = dir.rotateLeft();
             } else {
-                Location possibleObstacle = manager.myLocation.add(dir);
-                UnitInfo obstacle = uc.senseUnit(possibleObstacle);
-                if (obstacle == null || obstacle.getType() == UnitType.QUEEN || counterQueen > 12){
-                    lastObstacleFoundQueen = manager.myLocation.add(dir);
+                UnitInfo obstacle = uc.senseUnit(newLoc);
+                if (obstacle == null || obstacle.getType() == UnitType.QUEEN || counterQueen > QUEEN_WAIT_ROUNDS){
+                    lastObstacleFoundQueen = newLoc;
                     if (rotateRightQueen) dir = dir.rotateRight();
                     else dir = dir.rotateLeft();
                 } else {
                     counterQueen++;
                     break;
                 }
-                if (counterQueen > 15) {
+                if (counterQueen > QUEEN_RESET_ROUNDS) {
                     resetPathfindingQueen();
                 }
             }
@@ -222,13 +242,13 @@ public class Pathfinder {
 
     private void resetPathfindingQueen(){
         lastObstacleFoundQueen = null;
-        minDistToEnemyQueen = INF;
+        minDistToTargetQueen = INF;
         counterQueen = 0;
     }
 
     private void resetPathfinding(){
         lastObstacleFound = null;
-        minDistToEnemy = INF;
+        minDistToTarget = INF;
     }
 
     private Location soldierCenter() {
@@ -288,7 +308,10 @@ public class Pathfinder {
         }
         for (UnitInfo unit : list) {
             UnitType type = unit.getType();
-            if (type == UnitType.QUEEN || unit.isCocoon() || manager.isObstructed(unit.getLocation())) continue;
+            if (type == UnitType.QUEEN || unit.isCocoon()) continue;
+            // Fighters behind a rock corner join the fight a move later
+            Location loc = unit.getLocation();
+            if (manager.myLocation.distanceSquared(loc) > BEETLE_THREAT_RANGE && manager.isObstructed(loc)) continue;
             health += unit.getHealth();
             damage += doubledDps(type);
         }
@@ -299,12 +322,12 @@ public class Pathfinder {
         return (int) (2 * type.getAttack() / type.getAttackDelay());
     }
 
-    public boolean evalLocation(int allies, int enemies) {
+    public boolean evalLocation() {
         if (!uc.canMove()) return false;
 
         // Per turn constants for MicroInfo.update, which runs once per enemy and direction
         readyToAttack = uc.canAttack();
-        tradeThreats = uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType) ? 1 : TRADE_THREATS;
+        tradeThreats = manager.isHurt() ? 1 : TRADE_THREATS;
         armyCenter = manager.myType == UnitType.QUEEN ? soldierCenter() : null;
         homeQueen = manager.closestAllyQueen();
         myAttack = manager.myType.getAttack();
@@ -320,8 +343,8 @@ public class Pathfinder {
         boolean[] movable = new boolean[numDirs];
         Location target = lowestHealthEnemy();
         for (int i = 0; i < numDirs; i++) {
-            if (microInfo[i] == null) microInfo[i] = new MicroInfo(manager.dirs[i], allies, enemies);
-            else microInfo[i].reset(manager.dirs[i], allies, enemies);
+            if (microInfo[i] == null) microInfo[i] = new MicroInfo(manager.dirs[i]);
+            else microInfo[i].reset(manager.dirs[i]);
             if (target != null) microInfo[i].distToTarget = microInfo[i].loc.distanceSquared(target);
             movable[i] = uc.canMove(manager.dirs[i]);
         }
@@ -329,7 +352,7 @@ public class Pathfinder {
         if (manager.myType == UnitType.QUEEN) {
             for (UnitInfo ally : manager.units) {
                 // Skips the costly obstruction checks for allies she could not heal
-                if (ally.getHealth() >= manager.unitHealth(ally.getType())) continue;
+                if (ally.getHealth() >= ally.getType().maxHealth) continue;
                 if (manager.myLocation.distanceSquared(ally.getLocation()) > QUEEN_ALLY_RANGE) continue;
                 for (int i = 0; i < numDirs; i++) {
                     if (movable[i]) microInfo[i].updateAlly(ally);
@@ -382,8 +405,7 @@ public class Pathfinder {
             }
         }
         standoffRounds++;
-        boolean hurt = uc.getInfo().getHealth() * 2 < manager.unitHealth(manager.myType);
-        return hurt || standoffRounds > STANDOFF_ROUNDS;
+        return manager.isHurt() || standoffRounds > STANDOFF_ROUNDS;
     }
 
     // Ties go to the cheaper move: staying, then straight, then diagonal
@@ -405,8 +427,6 @@ public class Pathfinder {
         int numEnemies;
         int numAnts;
         int numSpiders;
-        int numBees;
-        int numBeetles;
         int softAttacks;
         int minDistToEnemy;
         int minDistToSoldier;
@@ -414,8 +434,6 @@ public class Pathfinder {
         int minDistToBeetle;
         int minDistToWoundedAlly;
         int distToTarget = INF;
-        int allies;
-        int enemies;
         boolean moveAndKill;
         boolean hasTarget;
         boolean obstructed;
@@ -424,22 +442,18 @@ public class Pathfinder {
         Direction dir;
         Location loc;
 
-        public MicroInfo(Direction dir, int allies, int enemies) {
-            reset(dir, allies, enemies);
+        public MicroInfo(Direction dir) {
+            reset(dir);
         }
 
-        void reset(Direction dir, int allies, int enemies) {
+        void reset(Direction dir) {
             this.dir = dir;
             hasTarget = false;
             distToTarget = INF;
-            this.allies = allies;
-            this.enemies = enemies;
             loc = manager.myLocation.add(dir);
             numEnemies = 0;
             numAnts = 0;
             numSpiders = 0;
-            numBees = 0;
-            numBeetles = 0;
             softAttacks = 0;
             minDistToEnemy = INF;
             minDistToSoldier = INF;
@@ -486,14 +500,12 @@ public class Pathfinder {
                 } else if (type == UnitType.BEE) {
                     if (distance <= GameConstants.BEE_ATTACK_RANGE_SQUARED) {
                         numEnemies++;
-                        numBees++;
                     }
                     if (distance <= BEE_THREAT_RANGE) softAttacks++;
                     if (distance < minDistToSoldier) minDistToSoldier = distance;
                 } else if (type == UnitType.BEETLE) {
                     if (distance <= GameConstants.BEETLE_ATTACK_RANGE_SQUARED) {
                         numEnemies++;
-                        numBeetles++;
                     }
                     if (distance <= BEETLE_THREAT_RANGE) softAttacks++;
                     if (distance < minDistToBeetle) minDistToBeetle = distance;
@@ -574,7 +586,7 @@ public class Pathfinder {
                 return distToTarget <= micro.distToTarget;
             }
             if (manager.myType != UnitType.SPIDER && numSpiders != 0 && numSpiders == numEnemies) return minDistToEnemy <= micro.minDistToEnemy;
-            if (manager.myType == UnitType.BEETLE && !uc.canAttack()) {
+            if (manager.myType == UnitType.BEETLE && !readyToAttack) {
                 int threats = numEnemies + numAnts;
                 int microThreats = micro.numEnemies + micro.numAnts;
                 if (threats != microThreats) return threats < microThreats;

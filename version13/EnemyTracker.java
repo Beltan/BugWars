@@ -17,14 +17,13 @@ public class EnemyTracker {
     public final int DEFENSE_RADIUS = 64;
     private final int DEFENSE_ROUNDS = 3;
 
-    private int LIST_SIZE = 61;
-    private int COUNT_BASE = 62;
-    private int DEFENSE_ROUND = 81;
-    private int DEFENSE_LOCATION = 82;
+    private final int LIST_SIZE = 61;
+    private final int COUNT_BASE = 62;
+    private final int DEFENSE_ROUND = 81;
+    private final int DEFENSE_LOCATION = 82;
     // Unit ids go from 0 to MAX_ID inclusive, so tables indexed by id need MAX_ID + 1 slots
-    private int SEEN_BASE = 40000;
-    private int LIST_BASE = SEEN_BASE + GameConstants.MAX_ID + 1;
-    private int LOCATION_BASE = GameConstants.TEAM_ARRAY_SIZE - GameConstants.MAX_ID - 1;
+    private final int SEEN_BASE = 40000;
+    private final int LIST_BASE = SEEN_BASE + GameConstants.MAX_ID + 1;
 
     public EnemyTracker(MemoryManager manager) {
         this.manager = manager;
@@ -55,7 +54,6 @@ public class EnemyTracker {
                 uc.write(LIST_SIZE, size + 1);
             }
             uc.write(SEEN_BASE + id, ((type.ordinal() + 1) << TYPE_SHIFT) | stamp);
-            uc.write(LOCATION_BASE + id, pack(loc));
 
             if (type != UnitType.ANT && type != UnitType.QUEEN) {
                 for (Location queen : myQueens) {
@@ -103,10 +101,6 @@ public class EnemyTracker {
 
     public int count(UnitType type) {
         return uc.read(COUNT_BASE + type.ordinal());
-    }
-
-    public Location lastLocation(int id) {
-        return unpack(uc.read(LOCATION_BASE + id));
     }
 
     public Location defenseAlert() {
