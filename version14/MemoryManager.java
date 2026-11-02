@@ -19,6 +19,11 @@ public class MemoryManager {
     public Location bestFood;
     public int bestFoodHealth;
     public int foodCount;
+    // A scan cut short by the energy limit leaves foodCount too low
+    public boolean foodScanComplete;
+    private UnitInfo[] visibleFor;
+    private UnitInfo[] antsCountedFor;
+    private Location firstVisible;
     public int foodHealthSum;
     public int maxFoodSum;
     private int localAnts;
@@ -43,6 +48,12 @@ public class MemoryManager {
     public final int MOVE_DIRECTIONS = 8;
     public final int ADJACENT_DISTANCE = 2;
     public final int ENERGY_SAFETY_LIMIT = GameConstants.MAX_BYTECODES - 4000;
+    // Loops after which a unit still has to move and attack stop here
+    public final int ACTION_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 3000;
+    // Food comes nearest first. The report runs before any action
+    private final int FOOD_REPORT_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 10500;
+    // A quiet turn still decides, moves, rescans and spawns after the queen's first scan
+    public final int FOOD_SCAN_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 7000;
     public final int QUEEN_DANGER_DISTANCE = 200;
     public final int ANT_SAFE_DISTANCE = 25;
     public final int SPIDER_MAX_ROCKS = 14;
@@ -165,11 +176,8 @@ public class MemoryManager {
         food = uc.senseFood();
         rocks = uc.senseObstacles();
 
-        // Only the queen's spawn rules read these counts
-        if (myType == UnitType.QUEEN) countVisibleTypes();
-
-        tracker.record();
-        map.recordRocks();
+        // The queen records her sightings after acting, in a crowd they cost the energy her move needs
+        if (myType != UnitType.QUEEN) tracker.record();
 
         // The first unit to act each round does the once-per-round shared work
         int roundStamp = round + 1;
@@ -197,8 +205,9 @@ public class MemoryManager {
             uc.write(SPIDERS_CURRENT, uc.read(SPIDERS_CURRENT) + 1);
         }
 
-        // Soldiers report food every few rounds only, the shared idle food rarely needs a faster refresh
-        if (myType == UnitType.QUEEN || myType == UnitType.ANT || (enemies.length == 0 && (round + myId) % SOLDIER_FOOD_REPORT_PERIOD == 0)) {
+        // Soldiers report food every few rounds only, the shared idle food rarely needs a faster refresh.
+        // In a fight the queen's report on a food-rich map costs the bytecodes her move needs
+        if (myType == UnitType.ANT || (myType == UnitType.QUEEN && enemies.length == 0) || (enemies.length == 0 && (round + myId) % SOLDIER_FOOD_REPORT_PERIOD == 0)) {
             int idleFoodHealth = getIdleFoodHealth();
             Location idleFoodLocation = getIdleFoodLocation();
             int xLoc = idleFoodLocation.x;
@@ -208,7 +217,7 @@ public class MemoryManager {
                 idleFoodHealth = 0;
             } else {
                 for (FoodInfo foodUnit : food) {
-                    if (uc.getEnergyUsed() > ENERGY_SAFETY_LIMIT) break;
+                    if (uc.getEnergyUsed() > FOOD_REPORT_ENERGY_LIMIT) break;
                     if (foodUnit.food == foodUnit.initialFood && idleFoodHealth < foodUnit.food) {
                         idleFoodHealth = foodUnit.food;
                         xLoc = foodUnit.location.x;
@@ -236,7 +245,7 @@ public class MemoryManager {
                 idleFoodHealthNotObs = 0;
             } else {
                 for (FoodInfo foodUnit : food) {
-                    if (uc.getEnergyUsed() > ENERGY_SAFETY_LIMIT) break;
+                    if (uc.getEnergyUsed() > FOOD_REPORT_ENERGY_LIMIT) break;
                     if (foodUnit.food == foodUnit.initialFood && idleFoodHealthNotObs < foodUnit.food && !isObstructed(foodUnit.location)) {
                         idleFoodHealthNotObs = foodUnit.food;
                         xLocNotObs = foodUnit.location.x;
@@ -256,13 +265,7 @@ public class MemoryManager {
             }
         }
 
-        Location sighting = null;
-        for (UnitInfo enemy : enemies) {
-            if (!isObstructed(enemy.getLocation())) {
-                sighting = enemy.getLocation();
-                break;
-            }
-        }
+        Location sighting = firstVisibleEnemy();
         if (sighting != null) {
             if (myType == UnitType.QUEEN || uc.read(BEACON_ROUND) != round + 1) {
                 uc.write(XBEACON, sighting.x);
@@ -417,7 +420,8 @@ public class MemoryManager {
         return false;
     }
 
-    private void countVisibleTypes() {
+    // Only the queen's spawn rules read these counts
+    public void countVisibleTypes() {
         enemyBeetles = 0;
         enemySpiders = 0;
         enemyBees = 0;
@@ -432,6 +436,8 @@ public class MemoryManager {
         allySpiders = 0;
         allyBees = 0;
         for (UnitInfo ally: units) {
+            // The spawn rules only compare these with the enemy counts
+            if (allyBeetles >= enemyBeetles + enemyBees && allyBees >= enemySpiders) break;
             UnitType type = ally.getType();
             if (type == UnitType.BEETLE) allyBeetles++;
             if (type == UnitType.SPIDER) allySpiders++;
@@ -504,16 +510,20 @@ public class MemoryManager {
         return path <= map.homeField.stepCost() * (WALK_DETOUR * straight + WALK_SLACK);
     }
 
-    public void scanFood() {
+    public void scanFood(int energyLimit) {
         bestFood = null;
         bestFoodHealth = 0;
         foodHealthSum = 0;
         maxFoodSum = 0;
         foodCount = 0;
+        foodScanComplete = true;
 
         for (FoodInfo foodUnit : food) {
             if (!myLocation.isEqual(foodUnit.location)) {
-                if (uc.getEnergyUsed() > ENERGY_SAFETY_LIMIT) break;
+                if (uc.getEnergyUsed() > energyLimit) {
+                    foodScanComplete = false;
+                    break;
+                }
                 if (!isObstructed(foodUnit.location) || isShortWalk(foodUnit.location)) {
                     foodHealthSum += foodUnit.food;
                     maxFoodSum += foodUnit.initialFood;
@@ -540,7 +550,10 @@ public class MemoryManager {
         return true;
     }
 
+    // Asked twice a turn, the answer only changes with a new sensing
     private void countLocalAnts() {
+        if (antsCountedFor == units) return;
+        antsCountedFor = units;
         localAnts = 0;
         localAntCocoons = 0;
         for (UnitInfo unit : units) {
@@ -771,11 +784,11 @@ public class MemoryManager {
         return false;
     }
 
-    // Stops counting at limit, callers only compare against it
+    // Stops counting at limit, callers only compare against it. In a crowd only the nearest are counted
     public int countVisibleSoldiers(UnitInfo[] list, int limit) {
         int count = 0;
         for (UnitInfo unit : list) {
-            if (count >= limit) break;
+            if (count >= limit || uc.getEnergyUsed() > ACTION_ENERGY_LIMIT) break;
             UnitType type = unit.getType();
             if (type != UnitType.QUEEN && type != UnitType.ANT && !isObstructed(unit.getLocation())) {
                 count++;
@@ -790,10 +803,13 @@ public class MemoryManager {
         return 1 + countVisibleSoldiers(units, enemySoldiers) < enemySoldiers;
     }
 
+    // For a tile next to this unit: enemies come nearest first, and none beyond a spider's reach can hit it
     public boolean isThreatened(Location loc) {
         for (UnitInfo enemy : enemies) {
+            Location enemyLoc = enemy.getLocation();
+            if (myLocation.distanceSquared(enemyLoc) > path.SPIDER_THREAT_RANGE) break;
             if (path.isHarmless(enemy)) continue;
-            if (loc.distanceSquared(enemy.getLocation()) <= enemy.getType().getAttackRangeSquared()) return true;
+            if (loc.distanceSquared(enemyLoc) <= enemy.getType().getAttackRangeSquared()) return true;
         }
         return false;
     }
@@ -812,14 +828,21 @@ public class MemoryManager {
     }
 
     public boolean allObstructed() {
-        boolean obstructed = true;
+        return firstVisibleEnemy() == null;
+    }
+
+    // Several rules ask each turn, and the answer only changes with a new sensing
+    public Location firstVisibleEnemy() {
+        if (visibleFor == enemies) return firstVisible;
+        visibleFor = enemies;
+        firstVisible = null;
         for (UnitInfo enemy : enemies) {
             if (!isObstructed(enemy.getLocation())) {
-                obstructed = false;
+                firstVisible = enemy.getLocation();
                 break;
             }
         }
-        return obstructed;
+        return firstVisible;
     }
 
     public void updateObjective() {

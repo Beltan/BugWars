@@ -33,7 +33,10 @@ public class Attacker {
     private void attackWeakestEnemy() {
         int smallestHealth = manager.INF;
         UnitInfo lowestEnemy = null;
+        int range = manager.myType.attackRangeSquared;
         for (UnitInfo enemy : manager.enemies) {
+            // Enemies come nearest first, the rest are out of range
+            if (manager.myLocation.distanceSquared(enemy.getLocation()) > range) break;
             int health = enemy.getHealth();
             if (health < smallestHealth && uc.canAttack(enemy)) {
                 smallestHealth = health;
@@ -58,7 +61,9 @@ public class Attacker {
     private void attackWeakestRock(int maxRockDurability) {
         int smallestRock = maxRockDurability;
         RockInfo weakestRock = null;
+        int range = manager.myType.attackRangeSquared;
         for (RockInfo rock : manager.rocks) {
+            if (manager.myLocation.distanceSquared(rock.getLocation()) > range) break;
             int durability = rock.getDurability();
             if (durability < smallestRock && uc.canAttack(rock)) {
                 smallestRock = durability;

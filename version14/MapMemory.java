@@ -12,6 +12,9 @@ public class MapMemory {
     private final int BREACH_ENERGY_MARGIN = 4000;
     private final int THICK_WALL_PENALTY = 1000;
     private final int WORK_MARGIN = 1500;
+    private final int ROCK_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - WORK_MARGIN;
+    // Units still move and attack after picking an explore target
+    private final int STALEST_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 3500;
     private final int ROCK_RECORD_PERIOD = 4;
     private final int ROCK_CHECKS = 4;
     private final int SEEN_ROCK = 1;
@@ -69,6 +72,12 @@ public class MapMemory {
     private int lastMarkY = -1;
     private int lastMarkRound = 0;
     private int lastRecordSymmetry = -1;
+    // A whole map of regions costs thousands, so a scan cut short by the energy limit goes on in the next turns
+    private final int STALEST_RESUME_ROUNDS = 6;
+    private int stalestNextX;
+    private int stalestCutRound = -1;
+    private Location stalestBest;
+    private int stalestBestScore;
 
     public int domainLow;
     public int domainSize;
@@ -100,11 +109,11 @@ public class MapMemory {
             verifyRocks();
             return;
         }
-        lastRecordLocation = manager.myLocation;
-        lastRecordSymmetry = symmetry;
         int xDoubleCenter = uc.read(manager.TEN_XCOORDINATE_CENTER) / 5;
         int yDoubleCenter = uc.read(manager.TEN_YCOORDINATE_CENTER) / 5;
         for (RockInfo rock : manager.rocks) {
+            // Rocks come nearest first, a cut list is finished on a later round
+            if (uc.getEnergyUsed() > ROCK_ENERGY_LIMIT) return;
             Location loc = rock.getLocation();
             recordRock(loc.x, loc.y, SEEN_ROCK);
             if (symmetry == SYMMETRY_MIRROR_X) {
@@ -115,6 +124,8 @@ public class MapMemory {
                 recordRock(xDoubleCenter - loc.x, yDoubleCenter - loc.y, MIRRORED_ROCK);
             }
         }
+        lastRecordLocation = manager.myLocation;
+        lastRecordSymmetry = symmetry;
         verifyRocks();
     }
 
@@ -166,12 +177,14 @@ public class MapMemory {
             return;
         }
         // Only a queen without any reachable food calls for a breach, elsewhere beetles have better things to do
-        if (manager.myType != UnitType.QUEEN || manager.foodCount != 0) return;
+        if (manager.myType != UnitType.QUEEN || manager.foodCount != 0 || !manager.foodScanComplete) return;
         if ((manager.round + manager.myId) % BREACH_PERIOD != 0 || !homeField.ready()) return;
         if (uc.getEnergyUsed() > GameConstants.MAX_BYTECODES - BREACH_ENERGY_MARGIN) return;
 
         Location sealed = null;
         for (FoodInfo food : manager.food) {
+            // A food-rich map in sight costs thousands here, and the scan that sets foodCount gives up when energy runs low
+            if (uc.getEnergyUsed() > GameConstants.MAX_BYTECODES - BREACH_ENERGY_MARGIN) return;
             if (!homeField.reachable(food.location)) {
                 sealed = food.location;
                 break;
@@ -278,23 +291,33 @@ public class MapMemory {
         int yHigh = domainLow + domainSize - 1;
         Location me = manager.myLocation;
 
-        Location best = null;
-        int bestScore = manager.INF;
-        for (int x = xLow - xLow % REGION; x <= xHigh; x += REGION) {
+        int firstX = xLow - xLow % REGION;
+        if (stalestCutRound < 0 || manager.round - stalestCutRound > STALEST_RESUME_ROUNDS || stalestNextX < firstX) {
+            stalestNextX = firstX;
+            stalestBest = null;
+            stalestBestScore = manager.INF;
+        }
+        for (int x = stalestNextX; x <= xHigh; x += REGION) {
+            if (uc.getEnergyUsed() > STALEST_ENERGY_LIMIT) {
+                stalestNextX = x;
+                stalestCutRound = manager.round;
+                return null;
+            }
             int cx = Math.min(Math.max(x + REGION / 2, xLow), xHigh);
             int dx = Math.abs(cx - me.x);
+            int column = REGION_BASE + ((cx % SIZE) / REGION) * REGIONS;
             for (int y = yLow - yLow % REGION; y <= yHigh; y += REGION) {
                 int cy = Math.min(Math.max(y + REGION / 2, yLow), yHigh);
                 int dy = Math.abs(cy - me.y);
-                int score = uc.read(REGION_BASE + ((cx % SIZE) / REGION) * REGIONS + (cy % SIZE) / REGION)
-                        + EXPLORE_DISTANCE_WEIGHT * Math.max(dx, dy);
-                if (score < bestScore) {
-                    bestScore = score;
-                    best = new Location(cx, cy);
+                int score = uc.read(column + (cy % SIZE) / REGION) + EXPLORE_DISTANCE_WEIGHT * Math.max(dx, dy);
+                if (score < stalestBestScore) {
+                    stalestBestScore = score;
+                    stalestBest = new Location(cx, cy);
                 }
             }
         }
-        return best;
+        stalestCutRound = -1;
+        return stalestBest;
     }
 
     public void work() {

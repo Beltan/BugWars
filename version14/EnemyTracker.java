@@ -21,6 +21,12 @@ public class EnemyTracker {
     private final int COUNT_BASE = 62;
     private final int DEFENSE_ROUND = 81;
     private final int DEFENSE_LOCATION = 82;
+    // A long list costs thousands, so a pass that runs short of energy goes on in the next root update
+    private final int RECOUNT_INDEX = 83;
+    private final int PARTIAL_COUNT_BASE = 84;
+    private final int RECOUNT_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 11000;
+    // The queen records after acting, the nearest enemies first
+    private final int RECORD_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 2500;
     // Unit ids go from 0 to MAX_ID inclusive, so tables indexed by id need MAX_ID + 1 slots
     private final int SEEN_BASE = 40000;
     private final int LIST_BASE = SEEN_BASE + GameConstants.MAX_ID + 1;
@@ -43,6 +49,7 @@ public class EnemyTracker {
         int stamp = manager.round + 1;
         Location[] myQueens = uc.getMyQueensLocation();
         for (UnitInfo enemy : manager.enemies) {
+            if (uc.getEnergyUsed() > RECORD_ENERGY_LIMIT) break;
             int id = enemy.getID();
             int seen = uc.read(SEEN_BASE + id);
             if ((seen & ROUND_MASK) == stamp) continue;
@@ -74,12 +81,22 @@ public class EnemyTracker {
     }
 
     public void recount() {
-        if (manager.round % COUNT_PERIOD != 0) return;
+        int next = uc.read(RECOUNT_INDEX);
+        if (next == 0 && manager.round % COUNT_PERIOD != 0) return;
         int[] counts = new int[UNIT_TYPES];
+        if (next != 0) {
+            for (int i = 0; i < UNIT_TYPES; i++) counts[i] = uc.read(PARTIAL_COUNT_BASE + i);
+        }
         int oldest = manager.round + 1 - MEMORY_ROUNDS;
         int size = uc.read(LIST_SIZE);
-        int index = 0;
+        int index = next == 0 ? 0 : next - 1;
         while (index < size) {
+            if (uc.getEnergyUsed() > RECOUNT_ENERGY_LIMIT) {
+                uc.write(LIST_SIZE, size);
+                uc.write(RECOUNT_INDEX, index + 1);
+                for (int i = 0; i < UNIT_TYPES; i++) uc.write(PARTIAL_COUNT_BASE + i, counts[i]);
+                return;
+            }
             int id = uc.read(LIST_BASE + index);
             int seen = uc.read(SEEN_BASE + id);
             int lastRound = seen & ROUND_MASK;
@@ -94,6 +111,7 @@ public class EnemyTracker {
             }
         }
         uc.write(LIST_SIZE, size);
+        uc.write(RECOUNT_INDEX, 0);
         for (int i = 0; i < UNIT_TYPES; i++) {
             uc.write(COUNT_BASE + i, counts[i]);
         }

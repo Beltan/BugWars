@@ -46,6 +46,10 @@ public class Pathfinder {
     final int QUEEN_RESET_ROUNDS = 15;
     // With fewer troops than this a hurt soldier retreats even when not outnumbered
     final int RETREAT_TROOPS = 20;
+    // Sensed units come nearest first, so a loop cut at these limits only drops the farthest.
+    // What is left of the turn after the micro must still fit: a unit over the limit loses its next turn
+    final int QUEEN_MICRO_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 5000;
+    final int QUEEN_ALLY_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 6500;
 
     boolean rotateRight = Math.random() > 0.5;
     Location lastObstacleFound = null;
@@ -257,6 +261,7 @@ public class Pathfinder {
     private Location soldierCenter() {
         int x = 0, y = 0, n = 0;
         for (UnitInfo ally : manager.units) {
+            if (uc.getEnergyUsed() > QUEEN_ALLY_ENERGY_LIMIT) break;
             UnitType type = ally.getType();
             if (type == UnitType.QUEEN || type == UnitType.ANT) continue;
             Location l = ally.getLocation();
@@ -332,7 +337,8 @@ public class Pathfinder {
     }
 
     public boolean evalLocation() {
-        if (!uc.canMove()) return false;
+        // With no enemy every tile counts as obstructed
+        if (!uc.canMove() || manager.enemies.length == 0) return false;
 
         // Per turn constants for MicroInfo.update, which runs once per enemy and direction
         readyToAttack = uc.canAttack();
@@ -352,26 +358,37 @@ public class Pathfinder {
         boolean[] movable = new boolean[numDirs];
         Location target = lowestHealthEnemy();
         for (int i = 0; i < numDirs; i++) {
-            if (microInfo[i] == null) microInfo[i] = new MicroInfo(manager.dirs[i]);
-            else microInfo[i].reset(manager.dirs[i]);
-            if (target != null) microInfo[i].distToTarget = microInfo[i].loc.distanceSquared(target);
             movable[i] = uc.canMove(manager.dirs[i]);
+            if (microInfo[i] == null) microInfo[i] = new MicroInfo(manager.dirs[i]);
+            // A blocked tile is never scored, it only has to stay out of the obstruction check
+            if (!movable[i]) {
+                microInfo[i].obstructed = true;
+                continue;
+            }
+            microInfo[i].reset(manager.dirs[i]);
+            if (target != null) microInfo[i].distToTarget = microInfo[i].loc.distanceSquared(target);
         }
 
+        // No rock in sight blocks no line
+        boolean rockFree = manager.rocks.length == 0;
         if (manager.myType == UnitType.QUEEN) {
             for (UnitInfo ally : manager.units) {
+                if (manager.myLocation.distanceSquared(ally.getLocation()) > QUEEN_ALLY_RANGE) break;
                 // Skips the costly obstruction checks for allies she could not heal
                 if (ally.getHealth() >= ally.getType().maxHealth) continue;
-                if (manager.myLocation.distanceSquared(ally.getLocation()) > QUEEN_ALLY_RANGE) continue;
+                if (uc.getEnergyUsed() > QUEEN_ALLY_ENERGY_LIMIT) break;
                 for (int i = 0; i < numDirs; i++) {
-                    if (movable[i]) microInfo[i].updateAlly(ally);
+                    if (movable[i]) microInfo[i].updateAlly(ally, rockFree);
                 }
             }
         }
 
-        // Enemy fields are read once per enemy, not once per direction; no rock in sight blocks no line
-        boolean rockFree = manager.rocks.length == 0;
-        for (UnitInfo enemy : manager.enemies) {
+        // Enemy fields are read once per enemy, not once per direction. The nearest enemy is always scored
+        int energyLimit = manager.myType == UnitType.QUEEN ? QUEEN_MICRO_ENERGY_LIMIT : manager.ACTION_ENERGY_LIMIT;
+        UnitInfo[] enemies = manager.enemies;
+        for (int e = 0; e < enemies.length; e++) {
+            if (e != 0 && uc.getEnergyUsed() > energyLimit) break;
+            UnitInfo enemy = enemies[e];
             UnitType type = enemy.getType();
             Location enemyLoc = enemy.getLocation();
             boolean ready = enemy.getAttackCooldown() < READY_COOLDOWN;
@@ -486,10 +503,10 @@ public class Pathfinder {
         }
 
         // Callers only pass wounded allies
-        void updateAlly(UnitInfo unit) {
+        void updateAlly(UnitInfo unit, boolean rockFree) {
             Location unitLoc = unit.getLocation();
             int distance = loc.distanceSquared(unitLoc);
-            if (distance >= minDistToWoundedAlly || uc.isObstructed(loc, unitLoc)) return;
+            if (distance >= minDistToWoundedAlly || (!rockFree && uc.isObstructed(loc, unitLoc))) return;
             minDistToWoundedAlly = distance;
         }
 

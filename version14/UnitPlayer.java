@@ -33,6 +33,8 @@ public class UnitPlayer {
                 spider.play();
             }
 
+            // Bookkeeping after acting, so a crowded turn cuts it short instead of the actions
+            manager.map.recordRocks();
             manager.map.work();
             uc.yield();
         }

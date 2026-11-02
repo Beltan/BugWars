@@ -11,6 +11,10 @@ public class Queen {
     private int unreachableNext = 0;
 
     private final int SURPLUS_RESOURCES = 400;
+    // Spawning waits a turn rather than push the queen over the energy limit, which costs her whole next turn
+    private final int SPAWN_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 3500;
+    // Past this a spawn tile counts as threatened without checking
+    private final int SAFE_SPAWN_ENERGY_LIMIT = GameConstants.MAX_BYTECODES - 2500;
     private final int UNREACHABLE_MEMORY = 4;
     // Walled food opens up once rocks break, so it is retried after a while
     private final int UNREACHABLE_ROUNDS = 50;
@@ -30,6 +34,7 @@ public class Queen {
         trySpawn();
         tryHeal();
         manager.checkRoom();
+        if (uc.getEnergyUsed() < manager.ENERGY_SAFETY_LIMIT) manager.tracker.record();
     }
 
     private void tryMove() {
@@ -40,12 +45,12 @@ public class Queen {
             manager.postMoveUpdate();
             // The spawn scans the food itself, and only when it can afford an ant
             if (!manager.myLocation.isEqual(start) && uc.getEnergyUsed() < manager.ENERGY_SAFETY_LIMIT && manager.resources >= GameConstants.ANT_COST) {
-                manager.scanFood();
+                manager.scanFood(manager.ENERGY_SAFETY_LIMIT);
                 scanned = true;
             }
             return;
         }
-        manager.scanFood();
+        manager.scanFood(manager.FOOD_SCAN_ENERGY_LIMIT);
         scanned = true;
 
         Location foodLocNotObs = manager.getIdleFoodLocationNotObs();
@@ -64,8 +69,8 @@ public class Queen {
             else if (uc.canMove(dir)) uc.move(dir);
         }
         manager.postMoveUpdate();
-        // Rescan only if moved, and only if energy is left for the spawn
-        if (!manager.myLocation.isEqual(start) && uc.getEnergyUsed() < manager.ENERGY_SAFETY_LIMIT) manager.scanFood();
+        // Rescan only if moved, and only with energy for a whole scan; otherwise the scan from one tile back stands
+        if (!manager.myLocation.isEqual(start) && uc.getEnergyUsed() < manager.FOOD_SCAN_ENERGY_LIMIT) manager.scanFood(manager.ENERGY_SAFETY_LIMIT);
     }
 
     // False when the finished food field shows the target walled off
@@ -99,8 +104,9 @@ public class Queen {
 
     private void trySpawn() {
         // Below the ant cost no unit is affordable
-        if (manager.resources < GameConstants.ANT_COST) return;
-        if (!scanned) manager.scanFood();
+        if (manager.resources < GameConstants.ANT_COST || uc.getEnergyUsed() > SPAWN_ENERGY_LIMIT) return;
+        manager.countVisibleTypes();
+        if (!scanned) manager.scanFood(manager.ENERGY_SAFETY_LIMIT);
         Location idleFoodNotObs = manager.getIdleFoodLocationNotObs();
         Location idleFood = manager.getIdleFoodLocation();
         Direction target;
@@ -152,7 +158,7 @@ public class Queen {
     private boolean spawnAt(UnitType type, Direction dir, boolean safeOnly) {
         if (!uc.canSpawn(dir, type)) return false;
         Location loc = manager.myLocation.add(dir);
-        if (safeOnly && manager.isThreatened(loc)) return false;
+        if (safeOnly && (uc.getEnergyUsed() > SAFE_SPAWN_ENERGY_LIMIT || manager.isThreatened(loc))) return false;
         uc.spawn(dir, type);
         manager.addCocoonList(loc);
         return true;
